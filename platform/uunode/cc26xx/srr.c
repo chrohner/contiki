@@ -20,7 +20,7 @@
 static void
 select_on_bus(void)
 {
-  ti_lib_gpio_pin_write(BOARD_IOID_SPI_CC2500_1_CS, 0);
+  ti_lib_gpio_pin_write(BOARD_SRR1_CS, 0);
 }
 /*---------------------------------------------------------------------------*/
 /**
@@ -29,7 +29,7 @@ select_on_bus(void)
 static void
 deselect(void)
 {
-  ti_lib_gpio_pin_write(BOARD_IOID_SPI_CC2500_1_CS, 1);
+  ti_lib_gpio_pin_write(BOARD_SRR1_CS, 1);
 }
 /*---------------------------------------------------------------------------*/
 bool
@@ -99,7 +99,7 @@ srr_write(const uint8_t addr, const uint8_t buf)
  * Configure CC2500 for Sportident SRR
  */
 bool
-srr_cmd(const uint8_t cmd) {
+srr_cmd(uint8_t cmd) {
     select_on_bus();
     
     if (board_spi_write(&cmd, 1) == false) {
@@ -137,18 +137,14 @@ srr_reset(void) {
     ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_SPI_CLK);
     ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_SPI_CC2500_1_CS);
     
-    ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_SPI_CC2500_1_GDO0);
-    ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_SPI_CC2500_1_GDO2);
-
-    
     // SCLK=1, SI=0
-    ti_lib_gpio_pin_write(BOARD_IOID_SPI_CLK, 1);
-    ti_lib_gpio_pin_write(BOARD_IOID_SPI_MOSI, 0);
+    ti_lib_gpio_pin_write(1 << BOARD_IOID_SPI_CLK, 1);
+    ti_lib_gpio_pin_write(1 << BOARD_IOID_SPI_MOSI, 0);
     // strobe CSn
     clock_delay_usec(10);
-    ti_lib_gpio_pin_write(BOARD_IOID_SPI_CC2500_1_CS, 0);
+    ti_lib_gpio_pin_write(BOARD_SRR1_CS, 0);
     clock_delay_usec(10);
-    ti_lib_gpio_pin_write(BOARD_IOID_SPI_CC2500_1_CS, 1);
+    ti_lib_gpio_pin_write(BOARD_SRR1_CS, 1);
 
 
     // configure IO to SPI
@@ -157,9 +153,9 @@ srr_reset(void) {
     // wait 40us
     clock_delay_usec(40);
     // pull CSn low
-    ti_lib_gpio_pin_write(BOARD_IOID_SPI_CC2500_1_CS, 0);
+    ti_lib_gpio_pin_write(BOARD_SRR1_CS, 0);
     // wait for SO to go low
-    while (ti_lib_gpio_pin_read(BOARD_IOID_SPI_MISO) == 1) {
+    while (ti_lib_gpio_pin_read(1 << BOARD_IOID_SPI_MISO) == 1) {
         clock_delay_usec(1);
     }; // TODO: don't wait forever!
 
@@ -167,12 +163,12 @@ srr_reset(void) {
     board_spi_write(&res, 1);
 
     // release CSn
-    ti_lib_gpio_pin_write(BOARD_IOID_SPI_CC2500_1_CS, 1);
+    ti_lib_gpio_pin_write(BOARD_SRR1_CS, 1);
 
     // wait for SO to go low
     clock_delay_usec(10000);
     ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_SPI_MISO);
-    while (ti_lib_gpio_pin_read(BOARD_IOID_SPI_MISO) == 1) {
+    while (ti_lib_gpio_pin_read(1 << BOARD_IOID_SPI_MISO) == 1) {
         clock_delay_usec(1);
     }; // TODO: don't wait forever!
 
@@ -212,21 +208,5 @@ srr_config(void) {
     
     srr_close();
 }
-/*---------------------------------------------------------------------------*/
-void
-srr_monitorGDOx() {
-    if (ti_lib_gpio_pin_read(BOARD_IOID_SPI_CC2500_1_GDO0) == 1) {
-        leds_on(LEDS_GREEN);
-    } else {
-        leds_off(LEDS_GREEN);
-    }
-    if (ti_lib_gpio_pin_read(BOARD_IOID_SPI_CC2500_1_GDO2) == 1) {
-        leds_on(LEDS_RED);
-    } else {
-        leds_off(LEDS_RED);
-    }
-    
-}
-
 /*---------------------------------------------------------------------------*/
 /** @} */
