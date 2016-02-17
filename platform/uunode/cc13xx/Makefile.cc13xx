@@ -1,0 +1,11 @@
+### Will allow the inclusion of the correct CPU makefile
+CPU_FAMILY = cc13xx
+
+CFLAGS += -DBOARD_SENSORTAG=0
+CFLAGS += -DBACKDOOR_IOID=0x00000000
+
+CONTIKI_TARGET_DIRS += cc13xx
+
+BOARD_SOURCEFILES += leds-arch.c
+BOARD_SOURCEFILES += sensor-common.c
+BOARD_SOURCEFILES += board.c board-spi.c board-i2c.c
