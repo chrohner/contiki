@@ -63,6 +63,41 @@ static struct ctimer timer_ctimer;
 void
 do_timeout1()
 {
+    
+    /* CC2500 example: set and read back channel and compare */
+    /* alternate between blue and red channel, test for blue ->> red LED blinking */
+    
+    uint8_t ch[2] = {SRR_CHANNEL_BLUE, SRR_CHANNEL_RED};
+    uint8_t buf = 0x00;
+    bool ret;
+    static uint8_t cnt = 0;
+    
+    leds_on(LEDS_RED);
+    leds_on(LEDS_GREEN);
+    clock_delay_usec(1000);  // LEDS be on at least for 1ms
+    
+    srr_init();
+    
+    // set configuration
+    srr_write(CC2500_CHANNR, ch[cnt%2]);
+    
+    // read register
+    ret = srr_read(CC2500_READ | CC2500_CHANNR, &buf);
+    
+    if (ret) {
+        leds_off(LEDS_GREEN);
+    }
+    if (buf == SRR_CHANNEL_BLUE) {
+        leds_off(LEDS_RED);
+    }
+    
+    cnt++;
+
+    srr_close();
+    
+    
+    
+    
   counter_etimer++;
   if(timer_expired(&timer_timer)) {
     counter_timer++;
@@ -75,16 +110,17 @@ do_timeout1()
   printf("\nProcess 1: %s", counter_timer == counter_etimer
          && counter_timer == counter_stimer ? "SUCCESS" : "FAIL");
 
+   // leds_toggle(LEDS_RED);
+
 }
 /*---------------------------------------------------------------------------*/
 void
 do_timeout2()
 {
-    srr_monitorGDOx();
-    
   ctimer_reset(&timer_ctimer);
   printf("\nProcess 2: CTimer callback called");
   counter_ctimer++;
+  //leds_toggle(LEDS_GREEN);
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(process1, ev, data)
@@ -95,14 +131,6 @@ PROCESS_THREAD(process1, ev, data)
   
     srr_reset();
     srr_config();
-
-    srr_cmd(CC2500_SIDLE);
-    srr_cmd(CC2500_SNOP);
-    srr_cmd(CC2500_SFRX);
-    // set power control?
-    srr_cmd(CC2500_SRX);
- 
-    
     
   while(1) {
     timer_set(&timer_timer, 3 * CLOCK_SECOND);
@@ -120,7 +148,7 @@ PROCESS_THREAD(process2, ev, data)
   PROCESS_BEGIN();
 
   while(1) {
-    ctimer_set(&timer_ctimer, 10000, do_timeout2, NULL);
+    ctimer_set(&timer_ctimer, 4 * CLOCK_SECOND, do_timeout2, NULL);
     PROCESS_YIELD();
   }
 
