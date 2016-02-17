@@ -221,7 +221,8 @@ static const output_config_t output_power[] = {
 #define OUTPUT_POWER_UNKNOWN 0xFFFF
 
 /* Default TX Power - position in output_power[] */
-const output_config_t *tx_power_current = &output_power[1];
+//const output_config_t *tx_power_current = &output_power[1];
+const output_config_t *tx_power_current = &output_power[9];  // ROH: 5dBm
 /*---------------------------------------------------------------------------*/
 #ifdef PROP_MODE_CONF_LO_DIVIDER
 #define PROP_MODE_LO_DIVIDER   PROP_MODE_CONF_LO_DIVIDER
@@ -952,6 +953,17 @@ on(void)
     return RF_CORE_CMD_ERROR;
   }
 
+#ifdef RANGE_EXTENDER  // ROH
+    ti_lib_gpio_pin_write(BOARD_HGM, 0);
+    ti_lib_gpio_pin_write(BOARD_LNA_EN, 1);
+    ti_lib_gpio_pin_write(BOARD_PA_EN, 1);
+
+    // weit 600ns for the CC1190 to start
+    clock_delay_usec(1);
+#endif
+    
+    
+    
   return rx_on_prop();
 }
 /*---------------------------------------------------------------------------*/
@@ -984,6 +996,12 @@ off(void)
 
   entry = (rfc_dataEntry_t *)rx_buf_1;
   entry->status = DATA_ENTRY_STATUS_PENDING;
+    
+#ifdef RANGE_EXTENDER //ROH
+    ti_lib_gpio_pin_write(BOARD_HGM, 0);
+    ti_lib_gpio_pin_write(BOARD_LNA_EN, 0);
+    ti_lib_gpio_pin_write(BOARD_PA_EN, 0);
+#endif
 
   return RF_CORE_CMD_OK;
 }
