@@ -182,6 +182,10 @@
 #define BOARD_IOID_RANGE_EXTENDER_HGM          IOID_1
 #define BOARD_IOID_RANGE_EXTENDER_LNA_EN       IOID_2
 #define BOARD_IOID_RANGE_EXTENDER_PA_EN        IOID_3
+#define BOARD_HGM                              (1 << BOARD_IOID_RANGE_EXTENDER_HGM)
+#define BOARD_LNA_EN                           (1 << BOARD_IOID_RANGE_EXTENDER_LNA_EN)
+#define BOARD_PA_EN                            (1 << BOARD_IOID_RANGE_EXTENDER_PA_EN)
+
 /** @} */
 /*---------------------------------------------------------------------------*/
 /**
