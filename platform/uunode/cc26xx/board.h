@@ -145,14 +145,16 @@
 #define BOARD_IOID_SPI_CC2500_1_CS      IOID_23
 #define BOARD_IOID_SPI_CC2500_1_GDO0    IOID_14
 #define BOARD_IOID_SPI_CC2500_1_GDO2    IOID_20
-#define BOARD_SPI_SRR1_GDO0             (1 << BOARD_IOID_SPI_CC2500_1_GDO0)
-#define BOARD_SPI_SRR1_GDO2             (1 << BOARD_IOID_SPI_CC2500_1_GDO2)
+#define BOARD_SRR1_CS                   (1 << BOARD_IOID_SPI_CC2500_1_CS)
+#define BOARD_SRR1_GDO0                 (1 << BOARD_IOID_SPI_CC2500_1_GDO0)
+#define BOARD_SRR1_GDO2                 (1 << BOARD_IOID_SPI_CC2500_1_GDO2)
 
 #define BOARD_IOID_SPI_CC2500_2_CS      IOID_27
 #define BOARD_IOID_SPI_CC2500_2_GDO0    IOID_21
 #define BOARD_IOID_SPI_CC2500_2_GDO2    IOID_3
-#define BOARD_SPI_SRR2_GDO0             (1 << BOARD_IOID_SPI_CC2500_2_GDO0)
-#define BOARD_SPI_SRR2_GDO2             (1 << BOARD_IOID_SPI_CC2500_2_GDO2)
+#define BOARD_SRR2_CS                   (1 << BOARD_IOID_SPI_CC2500_2_CS)
+#define BOARD_SRR2_GDO0                 (1 << BOARD_IOID_SPI_CC2500_2_GDO0)
+#define BOARD_SRR2_GDO2                 (1 << BOARD_IOID_SPI_CC2500_2_GDO2)
 /** @} */
 /*---------------------------------------------------------------------------*/
 /**
