@@ -10,9 +10,34 @@
 #include "contiki.h"
 #include "ti-lib.h"
 #include "board-spi.h"
+#include "gpio-interrupt.h"
+
 #include "srr.h"
 #include "srr-const.h"
 #include "leds.h"
+
+/*---------------------------------------------------------------------------*/
+#define GDOx_GPIO_CFG          (IOC_CURRENT_2MA  | IOC_STRENGTH_AUTO | \
+                                IOC_IOPULL_UP    | IOC_SLEW_DISABLE  | \
+                                IOC_HYST_DISABLE | IOC_BOTH_EDGES    | \
+                                IOC_INT_ENABLE   | IOC_IOMODE_NORMAL | \
+                                IOC_NO_WAKE_UP   | IOC_INPUT_ENABLE)
+
+/*---------------------------------------------------------------------------*/
+/**
+ * interrupt handler
+ */
+static void
+int_handler(uint8_t ioid)
+{
+    if (ioid == BOARD_IOID_SPI_CC2500_1_GDO0) {
+        leds_toggle(LEDS_RED);
+        if (ti_lib_gpio_pin_read(BOARD_SRR1_GDO0) == 1) {
+        }
+    }
+}
+
+
 /*---------------------------------------------------------------------------*/
 /**
  * Clear external flash CSN line
@@ -114,12 +139,6 @@ srr_cmd(uint8_t cmd) {
     return true;
 }
 /*---------------------------------------------------------------------------*/
-void
-srr_init()
-{
-    srr_open();
-}
-/*---------------------------------------------------------------------------*/
 /**
  * Reset CC2500 (section 19.1.2)
  */
@@ -146,10 +165,6 @@ srr_reset(void) {
     clock_delay_usec(10);
     ti_lib_gpio_pin_write(BOARD_SRR1_CS, 1);
 
-
-    // configure IO to SPI
-    board_spi_open(1000000, BOARD_IOID_SPI_CLK);
-
     // wait 40us
     clock_delay_usec(40);
     // pull CSn low
@@ -160,8 +175,10 @@ srr_reset(void) {
     }; // TODO: don't wait forever!
 
     // SRES strobe
+    board_spi_open(1000000, BOARD_IOID_SPI_CLK);
     board_spi_write(&res, 1);
-
+    board_spi_close();
+    
     // release CSn
     ti_lib_gpio_pin_write(BOARD_SRR1_CS, 1);
 
@@ -175,7 +192,7 @@ srr_reset(void) {
 }
 /*---------------------------------------------------------------------------*/
 /**
- * Configure CC2500 for Sportident SRR
+ * Configure CC2500 register and GDOx for Sportident SRR
  */
 void
 srr_config(void) {
@@ -207,6 +224,24 @@ srr_config(void) {
     }
     
     srr_close();
+
+
+    // configure callbacks (GDO0)
+    ti_lib_gpio_event_clear(BOARD_SRR1_GDO0);
+    ti_lib_ioc_port_configure_set(BOARD_IOID_SPI_CC2500_1_GDO0, IOC_PORT_GPIO, GDOx_GPIO_CFG);
+    ti_lib_gpio_dir_mode_set(BOARD_SRR1_GDO0, GPIO_DIR_MODE_IN);
+    gpio_interrupt_register_handler(BOARD_IOID_SPI_CC2500_1_GDO0, int_handler);
+    ti_lib_ioc_int_enable(BOARD_IOID_SPI_CC2500_1_GDO0);
+}
+
+/*---------------------------------------------------------------------------*/
+void
+srr_start() {
+    /*
+     cmd(CC2500_SIDLE);
+     cmd(CC2500_SNOP);
+     cmd(CC2500_SRX);
+     */
 }
 /*---------------------------------------------------------------------------*/
 /** @} */

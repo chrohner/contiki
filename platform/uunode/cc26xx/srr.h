@@ -7,6 +7,8 @@ bool srr_write(const uint8_t addr, const uint8_t buf);
 void srr_init();
 void srr_reset();
 void srr_config();
+void srr_init();
+void srr_start();
 /*---------------------------------------------------------------------------*/
 /** @} */
 #endif
