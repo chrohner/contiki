@@ -41,7 +41,6 @@
 #include "lpm.h"
 #include "ti-lib.h"
 #include "board-peripherals.h"
-#include "board-i2c.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -67,12 +66,6 @@ lpm_wakeup_handler(void)
 static void
 shutdown_handler(uint8_t mode)
 {
-  if(mode == LPM_MODE_SHUTDOWN) {
-    ti_lib_gpio_pin_clear(BOARD_MPU_POWER);
-  }
-
-  /* In all cases, stop the I2C */
-  board_i2c_shutdown();
 }
 /*---------------------------------------------------------------------------*/
 /*
@@ -86,27 +79,17 @@ LPM_MODULE(sensortag_module, NULL, shutdown_handler, lpm_wakeup_handler,
            LPM_DOMAIN_NONE);
 /*---------------------------------------------------------------------------*/
 static void
-configure_unused_pins(void)
+configure_range_extender(void)
 {
-  /* DP[0..3] */
-  ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_DP0);
-  ti_lib_ioc_io_port_pull_set(BOARD_IOID_DP0, IOC_IOPULL_DOWN);
-  ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_DP1);
-  ti_lib_ioc_io_port_pull_set(BOARD_IOID_DP1, IOC_IOPULL_DOWN);
-  ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_DP2);
-  ti_lib_ioc_io_port_pull_set(BOARD_IOID_DP2, IOC_IOPULL_DOWN);
-  ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_DP3);
-  ti_lib_ioc_io_port_pull_set(BOARD_IOID_DP3, IOC_IOPULL_DOWN);
-
-  /* Devpack ID */
-  ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_DEVPK_ID);
-  ti_lib_ioc_io_port_pull_set(BOARD_IOID_DEVPK_ID, IOC_IOPULL_UP);
-
-  /* UART over Devpack - TX only (ToDo: Map all UART pins to Debugger) */
-  ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_DP5_UARTTX);
-  ti_lib_ioc_io_port_pull_set(BOARD_IOID_DP5_UARTTX, IOC_IOPULL_DOWN);
 
 #ifdef RANGE_EXTENDER
+    /* configure radio (cr) */
+    // edited prop.mode.c to change the default to 5dBm (which is the input limit of CC1190)
+    
+    /* switch on range extender (CC1190) */
+
+    
+    
     /* Range Extender */  // ROH
     
     ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_RANGE_EXTENDER_HGM);
@@ -138,21 +121,12 @@ board_init()
   lpm_register_module(&sensortag_module);
 
   /* For unsupported peripherals, select a default pin configuration */
-  configure_unused_pins();
+  configure_range_extender();
     
   /* Re-enable interrupt if initially enabled. */
   if(!int_disabled) {
     ti_lib_int_master_enable();
   }
-    
-
-    /* configure radio (cr) */
-    // edited prop.mode.c to change the default to 5dBm (which is the input limit of CC1190)
-    
-    /* switch on range extender (CC1190) */
-    
-    
-    
 }
 /*---------------------------------------------------------------------------*/
 /** @} */

@@ -120,58 +120,6 @@
 /** @} */
 /*---------------------------------------------------------------------------*/
 /**
- * \brief SPI IOID mappings
- *
- * Those values are not meant to be modified by the user
- * @{
- */
-#define BOARD_IOID_SPI_MOSI       IOID_19
-#define BOARD_IOID_SPI_MISO       IOID_18
-/** @} */
-/*---------------------------------------------------------------------------*/
-/**
- * \brief I2C IOID mappings
- *
- * Those values are not meant to be modified by the user
- * @{
- */
-#define BOARD_IOID_SDA            IOID_5 /**< Interface 0 SDA: All sensors bar MPU */
-#define BOARD_IOID_SCL            IOID_6 /**< Interface 0 SCL: All sensors bar MPU */
-#define BOARD_IOID_SDA_HP         IOID_8 /**< Interface 1 SDA: MPU */
-#define BOARD_IOID_SCL_HP         IOID_9 /**< Interface 1 SCL: MPU */
-/** @} */
-/*---------------------------------------------------------------------------*/
-/**
- * \brief MPU IOID mappings
- *
- * Those values are not meant to be modified by the user
- * @{
- */
-#define BOARD_IOID_MPU_INT        IOID_7
-#define BOARD_IOID_MPU_POWER      IOID_12
-#define BOARD_MPU_INT             (1 << BOARD_IOID_MPU_INT)
-#define BOARD_MPU_POWER           (1 << BOARD_IOID_MPU_POWER)
-/** @} */
-/*---------------------------------------------------------------------------*/
-/**
- * \brief Board devpack IOID mappings (LCD etc.)
- *
- * Those values are not meant to be modified by the user
- * @{
- */
-#define BOARD_IOID_AUDIOFS_TDO        IOID_16
-#define BOARD_IOID_DEVPACK_CS         IOID_20
-#define BOARD_IOID_DEVPK_LCD_EXTCOMIN IOID_22
-#define BOARD_IOID_AUDIODO            IOID_22
-#define BOARD_IOID_DP2                IOID_23
-#define BOARD_IOID_DP1                IOID_24
-#define BOARD_IOID_DP0                IOID_25
-#define BOARD_IOID_DP3                IOID_27
-#define BOARD_IOID_DEVPK_ID           IOID_30
-#define BOARD_DEVPACK_CS              (1 << BOARD_IOID_DEVPACK_CS)
-/** @} */
-/*---------------------------------------------------------------------------*/
-/**
  * \brief Range Extender
  *
  * Those values are not meant to be modified by the user
