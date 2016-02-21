@@ -60,7 +60,7 @@ deselect(void)
 bool
 srr_open()
 {
-  board_spi_open(1000000, BOARD_IOID_SPI_CLK);
+  board_spi_open(4000000, BOARD_IOID_SPI_CLK);
 
   /* GPIO pin configuration */
   ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_SPI_CC2500_1_CS);
@@ -147,44 +147,34 @@ srr_reset(void) {
     
     uint8_t res = CC2500_SRES;
     
-    // switch off SPI  (open it again after reset!)
-    srr_close();
-    
     // configure IO to set the reset signals
     ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_SPI_MOSI);
     ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_SPI_MISO);
     ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_SPI_CLK);
     ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_SPI_CC2500_1_CS);
     
-    // SCLK=1, SI=0
+    // SCLK=1, SI=0, strobe CSn
     ti_lib_gpio_pin_write(1 << BOARD_IOID_SPI_CLK, 1);
     ti_lib_gpio_pin_write(1 << BOARD_IOID_SPI_MOSI, 0);
-    // strobe CSn
-    clock_delay_usec(10);
     ti_lib_gpio_pin_write(BOARD_SRR1_CS, 0);
     clock_delay_usec(10);
     ti_lib_gpio_pin_write(BOARD_SRR1_CS, 1);
 
-    // wait 40us
+    // wait 40us, pull CSn low, wait for SO to go low
     clock_delay_usec(40);
-    // pull CSn low
     ti_lib_gpio_pin_write(BOARD_SRR1_CS, 0);
-    // wait for SO to go low
     while (ti_lib_gpio_pin_read(1 << BOARD_IOID_SPI_MISO) == 1) {
+        leds_on(LEDS_RED);
         clock_delay_usec(1);
     }; // TODO: don't wait forever!
 
     // SRES strobe
-    board_spi_open(1000000, BOARD_IOID_SPI_CLK);
+    board_spi_open(4000000, BOARD_IOID_SPI_CLK);
     board_spi_write(&res, 1);
-    board_spi_close();
-    
-    // release CSn
-    ti_lib_gpio_pin_write(BOARD_SRR1_CS, 1);
 
-    // wait for SO to go low
-    clock_delay_usec(10000);
-    ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_SPI_MISO);
+    // release CSn, wait for SO to go low
+    ti_lib_gpio_pin_write(BOARD_SRR1_CS, 1);
+    // ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_SPI_MISO);
     while (ti_lib_gpio_pin_read(1 << BOARD_IOID_SPI_MISO) == 1) {
         clock_delay_usec(1);
     }; // TODO: don't wait forever!
