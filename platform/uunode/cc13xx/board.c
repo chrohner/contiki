@@ -96,7 +96,7 @@ configure_range_extender(void)
     ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_RANGE_EXTENDER_LNA_EN);
     ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_RANGE_EXTENDER_PA_EN);
     
-    ti_lib_gpio_pin_write(BOARD_HGM, 0);
+    ti_lib_gpio_pin_write(BOARD_HGM, 1);
     ti_lib_gpio_pin_write(BOARD_LNA_EN, 1);
     ti_lib_gpio_pin_write(BOARD_PA_EN, 1);
 #endif

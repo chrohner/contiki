@@ -215,14 +215,22 @@ static const output_config_t output_power[] = {
 
 #define OUTPUT_CONFIG_COUNT (sizeof(output_power) / sizeof(output_config_t))
 
-/* Max and Min Output Power in dBm */
-#define OUTPUT_POWER_MIN     (output_power[OUTPUT_CONFIG_COUNT - 1].dbm)
-#define OUTPUT_POWER_MAX     (output_power[0].dbm)
-#define OUTPUT_POWER_UNKNOWN 0xFFFF
+#ifdef RANGE_EXTENDER  // ROH: limit to 5dBm
+    /* Max and Min Output Power in dBm */
+    #define OUTPUT_POWER_MIN     (output_power[OUTPUT_CONFIG_COUNT - 1].dbm)
+    #define OUTPUT_POWER_MAX     (output_power[9].dbm)
+    #define OUTPUT_POWER_UNKNOWN 0xFFFF
+    /* Default TX Power - position in output_power[] */
+    const output_config_t *tx_power_current = &output_power[9];  // 5dBm
+#else
+    /* Max and Min Output Power in dBm */
+    #define OUTPUT_POWER_MIN     (output_power[OUTPUT_CONFIG_COUNT - 1].dbm)
+    #define OUTPUT_POWER_MAX     (output_power[0].dbm)
+    #define OUTPUT_POWER_UNKNOWN 0xFFFF
+    /* Default TX Power - position in output_power[] */
+    const output_config_t *tx_power_current = &output_power[1];
+#endif
 
-/* Default TX Power - position in output_power[] */
-//const output_config_t *tx_power_current = &output_power[1];
-const output_config_t *tx_power_current = &output_power[9];  // ROH: 5dBm
 /*---------------------------------------------------------------------------*/
 #ifdef PROP_MODE_CONF_LO_DIVIDER
 #define PROP_MODE_LO_DIVIDER   PROP_MODE_CONF_LO_DIVIDER
@@ -355,6 +363,9 @@ set_tx_power(radio_value_t power)
 {
   int i;
 
+  if (power > OUTPUT_POWER_MAX) power = OUTPUT_POWER_MAX; // ROH
+    
+    
   for(i = OUTPUT_CONFIG_COUNT - 1; i >= 0; --i) {
     if(power <= output_power[i].dbm) {
       /*
@@ -954,11 +965,11 @@ on(void)
   }
 
 #ifdef RANGE_EXTENDER  // ROH
-    ti_lib_gpio_pin_write(BOARD_HGM, 0);
-    ti_lib_gpio_pin_write(BOARD_LNA_EN, 1);
-    ti_lib_gpio_pin_write(BOARD_PA_EN, 1);
+//    ti_lib_gpio_pin_write(BOARD_HGM, 0);
+//    ti_lib_gpio_pin_write(BOARD_LNA_EN, 1);
+//    ti_lib_gpio_pin_write(BOARD_PA_EN, 1);
 
-    // weit 600ns for the CC1190 to start
+    // wait 600ns for the CC1190 to start
     clock_delay_usec(1);
 #endif
     
@@ -998,9 +1009,9 @@ off(void)
   entry->status = DATA_ENTRY_STATUS_PENDING;
     
 #ifdef RANGE_EXTENDER //ROH
-    ti_lib_gpio_pin_write(BOARD_HGM, 0);
-    ti_lib_gpio_pin_write(BOARD_LNA_EN, 0);
-    ti_lib_gpio_pin_write(BOARD_PA_EN, 0);
+//    ti_lib_gpio_pin_write(BOARD_HGM, 0);
+//    ti_lib_gpio_pin_write(BOARD_LNA_EN, 0);
+//    ti_lib_gpio_pin_write(BOARD_PA_EN, 0);
 #endif
 
   return RF_CORE_CMD_OK;

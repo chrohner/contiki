@@ -1,11 +1,11 @@
-CC      = arm-none-eabi-gcc
-CPP     = arm-none-eabi-cpp
-LD      = arm-none-eabi-gcc
-AR      = arm-none-eabi-ar
-OBJCOPY = arm-none-eabi-objcopy
-OBJDUMP = arm-none-eabi-objdump
-NM      = arm-none-eabi-nm
-SIZE    = arm-none-eabi-size
+CC      = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-gcc
+CPP     = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-cpp
+LD      = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-gcc
+AR      = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-ar
+OBJCOPY = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-objcopy
+OBJDUMP = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-objdump
+NM      = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-nm
+SIZE    = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-size
 SREC_CAT = srec_cat
 
 CPU_ABS_PATH       = cpu/cc26xx-cc13xx
@@ -82,7 +82,8 @@ TARGET_START_SOURCEFILES += fault-handlers.c $(TI_XXWARE_STARTUP_SRCS)
 TARGET_STARTFILES = $(addprefix $(OBJECTDIR)/,$(call oname, $(TARGET_START_SOURCEFILES)))
 
 ### Don't treat the .elf as intermediate
-.PRECIOUS: %.elf %.hex %.bin
+### .PRECIOUS: %.elf %.hex %.bin  // ROH: dont build hex
+.PRECIOUS: %.elf %.bin
 
 ### Always re-build ieee-addr.o in case the command line passes a new NODEID
 FORCE:
@@ -112,7 +113,8 @@ CUSTOM_RULE_LINK=1
 
 ### We don't really need the .hex and .bin for the .$(TARGET) but let's make
 ### sure they get built
-%.$(TARGET): %.elf %.hex %.bin
+### %.$(TARGET): %.elf %.hex %.bin   // ROH: dont build hex
+%.$(TARGET): %.elf %.bin
 	cp $< $@
 
 # a target that gives a user-friendly memory profile, taking into account the RAM

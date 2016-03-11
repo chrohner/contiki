@@ -18,7 +18,7 @@
 
 /*---------------------------------------------------------------------------*/
 #define GDOx_GPIO_CFG          (IOC_CURRENT_2MA  | IOC_STRENGTH_AUTO | \
-                                IOC_IOPULL_UP    | IOC_SLEW_DISABLE  | \
+                                IOC_NO_IOPULL    | IOC_SLEW_DISABLE  | \
                                 IOC_HYST_DISABLE | IOC_BOTH_EDGES    | \
                                 IOC_INT_ENABLE   | IOC_IOMODE_NORMAL | \
                                 IOC_NO_WAKE_UP   | IOC_INPUT_ENABLE)
@@ -31,11 +31,31 @@ static void
 int_handler(uint8_t ioid)
 {
     if (ioid == BOARD_IOID_SPI_CC2500_1_GDO0) {
-        leds_toggle(LEDS_RED);
-        if (ti_lib_gpio_pin_read(BOARD_SRR1_GDO0) == 1) {
+        leds_toggle(LEDS_GREEN);
+//        if (ti_lib_gpio_pin_read(BOARD_SRR1_GDO0) == 1) {
+//        }
+    }
+
+    if (ioid == BOARD_IOID_KEY_LEFT) {
+        leds_toggle(LEDS_GREEN);
+        if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 1) {
         }
     }
+
+    
 }
+
+static void
+int_enable(uint8_t ioid)
+{
+    ti_lib_gpio_event_clear(1 << ioid);
+    ti_lib_ioc_port_configure_set(ioid, IOC_PORT_GPIO, GDOx_GPIO_CFG);
+    ti_lib_gpio_dir_mode_set(1 << ioid, GPIO_DIR_MODE_IN);
+    gpio_interrupt_register_handler(ioid, int_handler);
+    ti_lib_ioc_int_enable(ioid);
+}
+
+
 
 
 /*---------------------------------------------------------------------------*/
@@ -60,7 +80,7 @@ deselect(void)
 bool
 srr_open()
 {
-  board_spi_open(4000000, BOARD_IOID_SPI_CLK);
+  board_spi_open(6000000, BOARD_IOID_SPI_CLK);
 
   /* GPIO pin configuration */
   ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_SPI_CC2500_1_CS);
@@ -164,12 +184,11 @@ srr_reset(void) {
     clock_delay_usec(40);
     ti_lib_gpio_pin_write(BOARD_SRR1_CS, 0);
     while (ti_lib_gpio_pin_read(1 << BOARD_IOID_SPI_MISO) == 1) {
-        leds_on(LEDS_RED);
         clock_delay_usec(1);
     }; // TODO: don't wait forever!
 
     // SRES strobe
-    board_spi_open(4000000, BOARD_IOID_SPI_CLK);
+    board_spi_open(6000000, BOARD_IOID_SPI_CLK);
     board_spi_write(&res, 1);
 
     // release CSn, wait for SO to go low
@@ -191,11 +210,10 @@ srr_config(void) {
     bool ret;
     static uint8_t i = 0;
     
-    leds_on(LEDS_RED);
-    leds_on(LEDS_GREEN);
-    
     srr_open();
 
+    // write the configuration
+    
     while (i < sizeof(cc2500_srr_config)-1) {
         // set configuration
         srr_write(cc2500_srr_config[i], cc2500_srr_config[i+1]);
@@ -203,35 +221,48 @@ srr_config(void) {
         i += 2;
     }
     
-    // read register to verify
-    ret = srr_read(CC2500_READ | CC2500_CHANNR, &buf);
+    // read CC2500_CHANNR to verify
+    ret = srr_read(CC2500_READ | CC2500_IOCFG0, &buf);
     
     if (ret) {
         leds_off(LEDS_GREEN);
     }
-    if (buf == SRR_CHANNEL_BLUE) {
+    if (buf == IOCFG_GDO_CFG_PKT_SYNCW_EOP) {
         leds_off(LEDS_RED);
+
+        // configure callbacks (GDO0)
+        int_enable(BOARD_IOID_SPI_CC2500_1_GDO0);
+        // int_enable(BOARD_IOID_KEY_LEFT);
     }
     
-    srr_close();
+    // SIDLE, SNOP, SRFRX
+    
+    while (i < sizeof(cc2500_srr_idle)-1) {
+        // set configuration
+        srr_cmd(cc2500_srr_idle[i]);
+        clock_delay_usec(100); // not necessary
+        i += 1;
+    }
 
+    //srr_cmd(CC2500_SRX);
+    clock_delay_usec(100);
+    
+//    srr_close();
 
-    // configure callbacks (GDO0)
-    ti_lib_gpio_event_clear(BOARD_SRR1_GDO0);
-    ti_lib_ioc_port_configure_set(BOARD_IOID_SPI_CC2500_1_GDO0, IOC_PORT_GPIO, GDOx_GPIO_CFG);
-    ti_lib_gpio_dir_mode_set(BOARD_SRR1_GDO0, GPIO_DIR_MODE_IN);
-    gpio_interrupt_register_handler(BOARD_IOID_SPI_CC2500_1_GDO0, int_handler);
-    ti_lib_ioc_int_enable(BOARD_IOID_SPI_CC2500_1_GDO0);
 }
 
 /*---------------------------------------------------------------------------*/
 void
 srr_start() {
-    /*
-     cmd(CC2500_SIDLE);
-     cmd(CC2500_SNOP);
-     cmd(CC2500_SRX);
-     */
+//    srr_open();
+    
+    srr_cmd(CC2500_SIDLE);
+    srr_cmd(CC2500_SNOP);
+    srr_cmd(CC2500_SNOP);
+
+    clock_delay_usec(809);   // IDLE->RX with calibration (section 19.6)
+
+//    srr_close();
 }
 /*---------------------------------------------------------------------------*/
 /** @} */

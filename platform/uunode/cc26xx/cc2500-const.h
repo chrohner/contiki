@@ -182,9 +182,9 @@
 /* CCA; RSSI < threshold ? assert : de-assert */
 #define IOCFG_GDO_CFG_CCA                9
 /* Carrier sense; RSSI > threshold ? assert : de-assert; inverted of CCA */
-#define IOCFG_GDO_CFG_CS                 14
+#define IOCFG_GDO_CFG_CS                 14  // 0x0E
 /* high impedance */
-#define IOCFG_GDO_CFG_HIGHZ              46
+#define IOCFG_GDO_CFG_HIGHZ              46  // 0x2E
 /*--------------------------------------------------------------------------*/
 /* the appended bytes; first one is RSSI, the second is LQI and CRC_OK */
 #define FOOTER1_LQI               0x7f

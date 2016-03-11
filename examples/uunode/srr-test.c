@@ -41,32 +41,30 @@
 #include "sys/rtimer.h"
 #include "leds.h"
 
-#include "srr-const.h"
-#include "srr.h"
+#include "ti-lib.h"
 
+#include "board-spi.h"
+#include "srr.h"
+#include "srr-const.h"
 
 
 PROCESS(process1, "ETimer x Timer x STimer Process");
-PROCESS(process2, "CTimer Process 2");
-AUTOSTART_PROCESSES(&process1, &process2);
+AUTOSTART_PROCESSES(&process1);
 
 static int counter_etimer;
 static int counter_timer;
 static int counter_stimer;
-static int counter_ctimer;
 static struct timer timer_timer;
 static struct stimer timer_stimer;
-static struct ctimer timer_ctimer;
 
 
 
 void
 do_timeout1()
 {
-    
     /* CC2500 example: set and read back channel and compare */
     /* alternate between blue and red channel, test for blue ->> red LED blinking */
-    
+
     uint8_t ch[2] = {SRR_CHANNEL_BLUE, SRR_CHANNEL_RED};
     uint8_t buf = 0x00;
     bool ret;
@@ -76,7 +74,10 @@ do_timeout1()
     leds_on(LEDS_GREEN);
     clock_delay_usec(1000);  // LEDS be on at least for 1ms
     
-    srr_init();
+    srr_open();
+
+    srr_start();
+
     
     // set configuration
     srr_write(CC2500_CHANNR, ch[cnt%2]);
@@ -97,7 +98,6 @@ do_timeout1()
     
     
     
-    
   counter_etimer++;
   if(timer_expired(&timer_timer)) {
     counter_timer++;
@@ -110,17 +110,6 @@ do_timeout1()
   printf("\nProcess 1: %s", counter_timer == counter_etimer
          && counter_timer == counter_stimer ? "SUCCESS" : "FAIL");
 
-   // leds_toggle(LEDS_RED);
-
-}
-/*---------------------------------------------------------------------------*/
-void
-do_timeout2()
-{
-  ctimer_reset(&timer_ctimer);
-  printf("\nProcess 2: CTimer callback called");
-  counter_ctimer++;
-  //leds_toggle(LEDS_GREEN);
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(process1, ev, data)
@@ -133,24 +122,12 @@ PROCESS_THREAD(process1, ev, data)
     srr_config();
     
   while(1) {
-    timer_set(&timer_timer, 3 * CLOCK_SECOND);
-    stimer_set(&timer_stimer, 3);
-    etimer_set(&timer_etimer, 3 * CLOCK_SECOND);
+    timer_set(&timer_timer, 2 * CLOCK_SECOND);
+    stimer_set(&timer_stimer, 2);
+    etimer_set(&timer_etimer, 2 * CLOCK_SECOND);
     PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
     do_timeout1();
   }
-
-  PROCESS_END();
-}
-/*---------------------------------------------------------------------------*/
-PROCESS_THREAD(process2, ev, data)
-{
-  PROCESS_BEGIN();
-
-  while(1) {
-    ctimer_set(&timer_ctimer, 4 * CLOCK_SECOND, do_timeout2, NULL);
-    PROCESS_YIELD();
-  }
-
+    
   PROCESS_END();
 }

@@ -41,8 +41,6 @@
 #include "net/rime/rime.h"
 #include "random.h"
 
-#include "dev/button-sensor.h"
-
 #include "dev/leds.h"
 
 #include <stdio.h>
@@ -54,6 +52,10 @@ static void
 abc_recv(struct abc_conn *c)
 {
   printf("abc message received '%s'\n", (char *)packetbuf_dataptr());
+    leds_on(LEDS_RED);
+    clock_delay_usec(30000);
+    leds_off(LEDS_RED);
+
 }
 static const struct abc_callbacks abc_call = {abc_recv};
 static struct abc_conn abc;
@@ -71,13 +73,18 @@ PROCESS_THREAD(example_abc_process, ev, data)
   while(1) {
 
     /* Delay 2-4 seconds */
-    etimer_set(&et, CLOCK_SECOND * 2 + random_rand() % (CLOCK_SECOND * 2));
+    etimer_set(&et, CLOCK_SECOND);
 
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
     packetbuf_copyfrom("Hello", 6);
-    abc_send(&abc);
+    //abc_send(&abc);
     printf("abc message sent\n");
+      
+      //leds_on(LEDS_GREEN);
+      //clock_delay_usec(30000);
+      //leds_off(LEDS_GREEN);
+
   }
 
   PROCESS_END();
