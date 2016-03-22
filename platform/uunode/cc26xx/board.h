@@ -155,6 +155,10 @@
 #define BOARD_SRR2_CS                   (1 << BOARD_IOID_SPI_CC2500_2_CS)
 #define BOARD_SRR2_GDO0                 (1 << BOARD_IOID_SPI_CC2500_2_GDO0)
 #define BOARD_SRR2_GDO2                 (1 << BOARD_IOID_SPI_CC2500_2_GDO2)
+
+#define BOARD_IOID_SPI_USB_CS            IOID_30
+#define BOARD_USB_CS                    (1 << BOARD_IOID_SPI_USB_CS)
+
 /** @} */
 /*---------------------------------------------------------------------------*/
 /**

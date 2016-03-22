@@ -41,6 +41,8 @@
 #include "lpm.h"
 #include "ti-lib.h"
 #include "board-peripherals.h"
+#include "net/netstack.h"
+
 
 #include <stdint.h>
 #include <string.h>
@@ -79,18 +81,15 @@ LPM_MODULE(sensortag_module, NULL, shutdown_handler, lpm_wakeup_handler,
            LPM_DOMAIN_NONE);
 /*---------------------------------------------------------------------------*/
 static void
-configure_range_extender(void)
+configure_range_extender(void)     // ROH
 {
-
-#ifdef RANGE_EXTENDER
     /* configure radio (cr) */
     // edited prop.mode.c to change the default to 5dBm (which is the input limit of CC1190)
-    
-    /* switch on range extender (CC1190) */
 
+    /* limit CC1310 output to 5dBm (input limit of CC1190) */
+    NETSTACK_RADIO.set_value(RADIO_PARAM_TXPOWER, 5);
     
-    
-    /* Range Extender */  // ROH
+    /* Configure GPIO pins and switch amplifiers on */
     
     ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_RANGE_EXTENDER_HGM);
     ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_RANGE_EXTENDER_LNA_EN);
@@ -99,8 +98,6 @@ configure_range_extender(void)
     ti_lib_gpio_pin_write(BOARD_HGM, 1);
     ti_lib_gpio_pin_write(BOARD_LNA_EN, 1);
     ti_lib_gpio_pin_write(BOARD_PA_EN, 1);
-#endif
-
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -121,7 +118,9 @@ board_init()
   lpm_register_module(&sensortag_module);
 
   /* For unsupported peripherals, select a default pin configuration */
-  configure_range_extender();
+#ifdef RANGE_EXTENDER
+    configure_range_extender();
+#endif
     
   /* Re-enable interrupt if initially enabled. */
   if(!int_disabled) {

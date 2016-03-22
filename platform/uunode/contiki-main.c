@@ -110,17 +110,6 @@ set_rf_params(void)
   NETSTACK_RADIO.get_value(RADIO_PARAM_CHANNEL, &val);
   printf(" RF: Channel %d\n", val);
 
-/*
-    // roh (set 5dBm)
-    leds_on(LEDS_RED);
-    NETSTACK_RADIO.set_value(RADIO_PARAM_TXPOWER, 5);
-    NETSTACK_RADIO.get_value(RADIO_PARAM_TXPOWER, &val);
-    if (val == 5) {
-        leds_off(LEDS_RED);
-    }
-*/
-    
-
 #if STARTUP_CONF_VERBOSE
   {
     int i;
