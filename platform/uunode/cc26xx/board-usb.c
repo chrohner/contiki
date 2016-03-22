@@ -14,6 +14,17 @@
 #include "board-usb.h"
 #include "leds.h"
 
+// FT1248 commands
+#define USB_CMD_WRITE                   0x00
+#define USB_CMD_READ                    0x01
+#define USB_CMD_READ_MODEM_STATUS       0x02
+#define USB_CMD_WRITE_MODEM_STATUS      0x03
+#define USB_CMD_WRITE_BUFFER_FLUSH      0x04
+#define USB_CMD_ADDRESS_EEPROM          0x05
+#define USB_CMD_WRITE_EEPROM            0x06
+#define USB_CMD_READ_EEPROM             0x07
+#define USB_CMD_READ_USB_STATUS         0x08
+
 
 /*---------------------------------------------------------------------------*/
 /**
@@ -68,6 +79,8 @@ usb_write(const uint8_t buf)
 {
     select_on_bus();
 
+    board_spi_write(USB_CMD_WRITE, 1);
+    
     if (board_spi_write(&buf, 1) == false) {
         /* failure */
         deselect();
