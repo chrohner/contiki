@@ -51,7 +51,7 @@ usb_open()
   board_spi_open(6000000, BOARD_IOID_SPI_CLK);
 
   /* GPIO pin configuration */
-  ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_SPI_CC2500_1_CS);
+  ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_SPI_USB_CS);
 
   /* Default output to clear chip select */
   deselect();
