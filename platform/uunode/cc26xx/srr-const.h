@@ -47,9 +47,11 @@ static const uint8_t cc2500_srr_version[] = {
 
 static const uint8_t cc2500_srr_config[] = {
 
-CC2500_IOCFG0,      IOCFG_GDO_CFG_PKT_SYNCW_EOP,
+CC2500_IOCFG0,      IOCFG_GDO_CFG_RXFIFO_THR_PKT,
 CC2500_IOCFG2,      0x1B,	// PA_PD
 
+CC2500_FIFOTHR,     0x15,   // (TX: 1) RX: 64
+    
 // CC2500_MCSM2
 CC2500_MCSM1,       0x3F,	// Rx->Rx, Tx->Rx, CCA threshold
 CC2500_MCSM0,       0x18,	// calibration IDLE->{RX,TX}, PO timeout 150us, XOSC off in SLEEP
@@ -61,7 +63,7 @@ CC2500_PKTCTRL0,    0x05,	// no withening, Normal mode, use FIFOs for RX and TX
 CC2500_PATABLE,     0xFE,  	// 0dBm output power
 // CC2500_ADDR,     0x00,
 
-CC2500_CHANNR,      SRR_CHANNEL_BLUE,
+CC2500_CHANNR,      SRR_CHANNEL_RED,
 
 CC2500_FSCTRL1,     0x07,	// FREQ_IF 26MHz/2**10 * 7 = 177,7kHz
 CC2500_FSCTRL0,     0x00,	// FREQOFF 0 Hz

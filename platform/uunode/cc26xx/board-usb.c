@@ -75,21 +75,25 @@ usb_read(uint8_t *buf)
 }
 /*---------------------------------------------------------------------------*/
 bool
-usb_write(const uint8_t buf)
+usb_write(const uint8_t* buf, uint8_t len)
 {
-    select_on_bus();
-
-    board_spi_write(USB_CMD_WRITE, 1);
+    uint8_t i;
     
-    if (board_spi_write(&buf, 1) == false) {
+    select_on_bus();
+    
+    if (board_spi_write(USB_CMD_WRITE, 1) == false) {
         /* failure */
         deselect();
         return false;
-    };
+    }
+    
+    for (i=0; i<len; i++) {
+        board_spi_write(&buf[i], 1);
+    }
     
     deselect();
-
-  return true;
+    
+    return true;
 }
 /*---------------------------------------------------------------------------*/
 /** @} */

@@ -42,6 +42,8 @@
 #include "ti-lib.h"
 #include "board-peripherals.h"
 #include "board-i2c.h"
+#include "board-usb.h"
+#include "srr.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -129,6 +131,10 @@ board_init()
   if(!int_disabled) {
     ti_lib_int_master_enable();
   }
+    
+    // roh (testing open once and forever)
+    srr_open();
+    usb_open();
 }
 /*---------------------------------------------------------------------------*/
 /** @} */

@@ -78,12 +78,12 @@ PROCESS_THREAD(example_abc_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
     packetbuf_copyfrom("Hello", 6);
-    //abc_send(&abc);
+    abc_send(&abc);
     printf("abc message sent\n");
       
-      //leds_on(LEDS_GREEN);
-      //clock_delay_usec(30000);
-      //leds_off(LEDS_GREEN);
+      leds_on(LEDS_GREEN);
+      clock_delay_usec(30000);
+      leds_off(LEDS_GREEN);
 
   }
 

@@ -41,7 +41,9 @@
 #include "board-spi.h"
 #include "board.h"
 
+#include <stdint.h>
 #include <stdbool.h>
+
 /*---------------------------------------------------------------------------*/
 static bool
 accessible(void)
@@ -60,15 +62,16 @@ accessible(void)
   return true;
 }
 /*---------------------------------------------------------------------------*/
-bool
+uint32_t
 board_spi_write(const uint8_t *buf, size_t len)
 {
+    uint32_t ul;
+
   if(accessible() == false) {
     return false;
   }
 
   while(len > 0) {
-    uint32_t ul;
 
     ti_lib_ssi_data_put(SSI0_BASE, *buf);
     ti_lib_rom_ssi_data_get(SSI0_BASE, &ul);
@@ -76,7 +79,7 @@ board_spi_write(const uint8_t *buf, size_t len)
     buf++;
   }
 
-  return true;
+  return ul;
 }
 /*---------------------------------------------------------------------------*/
 bool
@@ -116,7 +119,7 @@ void
 board_spi_open(uint32_t bit_rate, uint32_t clk_pin)
 {
   uint32_t buf;
-
+    
   /* First, make sure the SERIAL PD is on */
   ti_lib_prcm_power_domain_on(PRCM_DOMAIN_SERIAL);
   while((ti_lib_prcm_power_domain_status(PRCM_DOMAIN_SERIAL)

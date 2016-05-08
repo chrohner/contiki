@@ -95,7 +95,7 @@ bool board_spi_read(uint8_t *buf, size_t length);
  * Calls to this function must be preceded by a call to board_spi_open(). It is
  * recommended to call board_spi_close() at the end of an operation.
  */
-bool board_spi_write(const uint8_t *buf, size_t length);
+uint32_t board_spi_write(const uint8_t *buf, size_t length);
 /*---------------------------------------------------------------------------*/
 #endif /* BOARD_SPI_H_ */
 /*---------------------------------------------------------------------------*/
