@@ -76,10 +76,8 @@ do_timeout1()
 
     // read register
     ret = srr_read(CC2500_READ | cnt%(0x30), &buf, 1);
-    cnt++;
-    
     printf("spi: %02x: %02x  (%02x)\r\n", cnt, buf, (uint8_t)(ret & 0xff));
-    
+    cnt++;
     
   counter_etimer++;
   if(timer_expired(&timer_timer)) {

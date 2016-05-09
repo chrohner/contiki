@@ -30,33 +30,70 @@
                                  IOC_INT_ENABLE   | IOC_IOMODE_NORMAL | \
                                  IOC_NO_WAKE_UP   | IOC_INPUT_ENABLE)
 
+/*---------------------------------------------------------------------------*/
+struct __attribute__((__packed__)) s_srr_header {
+    uint32_t dest;
+    uint32_t src;
+    uint8_t type;
+    uint8_t p1;
+    uint8_t p2;
+    uint8_t p3;
+    uint8_t p4;
+};
+
+struct __attribute__((__packed__)) s_punch {
+    uint32_t x;
+    uint16_t siCode;
+    uint32_t cardId;
+    uint32_t y;
+    uint8_t u;
+    uint8_t v;
+    uint8_t w;
+};
 
 /*---------------------------------------------------------------------------*/
+
+
 /**
  * interrupt handler
  */
 static void
 int_handler(uint8_t ioid)
 {
-    uint32_t ret;
     uint8_t buf[64];
     uint8_t num;
     uint8_t i;
+    struct s_srr_header *h;
+    struct s_punch *p;
     
     if (ioid == BOARD_IOID_SPI_CC2500_1_GDO0) {
         leds_toggle(LEDS_RED);
         printf("SRR RX: ");
 
-        while((ret = srr_cmd(CC2500_SNOP)) & 0x0f) {
-            num = (ret&0x0f);
-            printf("(%u) ", num);
-            if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf+1, num)) {
-                for (i=0; i<num; i++) {
-                    printf("%02x ", buf[0]);
-                }
+        // len
+        srr_read(CC2500_RXFIFO | CC2500_READ, &num, 1);
+        printf("%02x | ", num);
+        // data
+        if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf, num)) {
+            for (i=0; i<num; i++) {
+                printf("%02x ", buf[i]);
             }
         }
-
+        // crc
+        printf("| ");
+        if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf+num, 2)) {
+            for (i=0; i<2; i++) {
+                printf("%02x ", buf[num+i]);
+            }
+        }
+        
+        h = (struct s_srr_header*)buf;
+        // printf("d:%lu s:%lu t:%02x", h->dest, h->src, h->type);
+        if (h->type == 0x20) {
+            p = (struct s_punch*)(buf+sizeof(*h));
+            printf("> %u %lu", p->siCode, p->cardId);
+        }
+        
         printf("\r\n");
     }
 
@@ -75,8 +112,6 @@ int_handler(uint8_t ioid)
             srr_start();
         }
     }
-
-    
 }
 
 static void
