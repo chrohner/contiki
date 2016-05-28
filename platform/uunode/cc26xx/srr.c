@@ -148,6 +148,7 @@ srr_protocol(uint8_t *buf, uint8_t len)
     uint8_t *_d3 = &(d3[0]);
 
     h = (struct s_srr_header*)buf;
+    
     // prepare reply packet
     h->dest = h->src;
     h->src = (uint32_t)node_id;
@@ -161,7 +162,7 @@ srr_protocol(uint8_t *buf, uint8_t len)
             h->p3 |= 0x80;
             memcpy(buf+sizeof(struct s_srr_header), srr_associate_02_response, sizeof(srr_associate_02_response));
             if (!srr_sniffer_mode) {
-                srr_write(CC2500_TXFIFO, buf, sizeof(s_srr_header)+sizeof(srr_associate_02_response));
+                srr_write(CC2500_TXFIFO | CC2500_BURSTWRITE, buf, sizeof(struct s_srr_header)+sizeof(srr_associate_02_response));
                 srr_cmd(CC2500_STX);
             }
             break;
@@ -172,7 +173,7 @@ srr_protocol(uint8_t *buf, uint8_t len)
             h->p3 |= 0x80;
             memcpy(buf+sizeof(struct s_srr_header), srr_associate_03_response, sizeof(srr_associate_03_response));
             if (!srr_sniffer_mode) {
-                srr_write(CC2500_TXFIFO, buf, sizeof(s_srr_header)+sizeof(srr_associate_03_response));
+                srr_write(CC2500_TXFIFO | CC2500_BURSTWRITE, buf, sizeof(struct s_srr_header)+sizeof(srr_associate_03_response));
                 srr_cmd(CC2500_STX);
             }
             break;
@@ -181,7 +182,7 @@ srr_protocol(uint8_t *buf, uint8_t len)
             h->p1 |= 0x20;
             h->p3 |= 0x80;
             if (!srr_sniffer_mode) {
-                srr_write(CC2500_TXFIFO, h, sizeof(s_srr_header));
+                srr_write(CC2500_TXFIFO | CC2500_BURSTWRITE, (uint8_t *)h, sizeof(struct s_srr_header));
                 srr_cmd(CC2500_STX);
             }
             break;
@@ -201,7 +202,7 @@ srr_protocol(uint8_t *buf, uint8_t len)
                 h->p3 = 0x73;
                 h->p4 = 0x60;
                 if (!srr_sniffer_mode) {
-                    srr_write(CC2500_TXFIFO, h, sizeof(s_srr_header));
+                    srr_write(CC2500_TXFIFO | CC2500_BURSTWRITE, (uint8_t *)h, sizeof(struct s_srr_header));
                     srr_cmd(CC2500_STX);
                 }
             } else {
@@ -213,7 +214,7 @@ srr_protocol(uint8_t *buf, uint8_t len)
                 h->p4 = 0x63;
                 memcpy(buf+sizeof(struct s_srr_header), srr_ping_ack, sizeof(srr_ping_ack));
                 if (!srr_sniffer_mode) {
-                    srr_write(CC2500_TXFIFO, buf, sizeof(s_srr_header)+sizeof(srr_ping_ack));
+                    srr_write(CC2500_TXFIFO | CC2500_BURSTWRITE, buf, sizeof(struct s_srr_header)+sizeof(srr_ping_ack));
                     srr_cmd(CC2500_STX);
                 }
             }
@@ -314,7 +315,7 @@ srr_read(const uint8_t addr, uint8_t *buf, uint8_t len)
 }
 /*---------------------------------------------------------------------------*/
 bool
-srr_write(const uint8_t addr, const uint8_t buf)
+srr_write(const uint8_t addr, const uint8_t *buf, uint8_t len)
 {
     srr_open();
     select_on_bus();
@@ -324,9 +325,8 @@ srr_write(const uint8_t addr, const uint8_t buf)
         deselect();
         return false;
     };
-    clock_delay_usec(1);
 
-    if (board_spi_write(&buf, 1) == false) {
+    if (board_spi_write(buf, len) == false) {
       /* failure */
       deselect();
       return false;
@@ -413,7 +413,7 @@ srr_config(void) {
 
     // write the configuration
     for (i=0; i < sizeof(cc2500_srr_config); i+=2) {
-        srr_write(cc2500_srr_config[i], cc2500_srr_config[i+1]);
+        srr_write(cc2500_srr_config[i], &cc2500_srr_config[i+1], 1);
         clock_delay_usec(10); // not necessary
     }
 

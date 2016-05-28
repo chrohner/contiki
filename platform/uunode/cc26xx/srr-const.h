@@ -57,7 +57,7 @@ CC2500_MCSM1,       0x3F,	// Rx->Rx, Tx->Rx, CCA threshold
 CC2500_MCSM0,       0x18,	// calibration IDLE->{RX,TX}, PO timeout 150us, XOSC off in SLEEP
 
 CC2500_PKTLEN,      0x29,
-CC2500_PKTCTRL1,    0x04,   // RSSI, LQI status bytes appended
+CC2500_PKTCTRL1,    0x0C,   // CRC autoflush, RSSI/LQI status
 CC2500_PKTCTRL0,    0x05,	// no withening, Normal mode, use FIFOs for RX and TX
                             // CRC, Variable packet length mode
 CC2500_PATABLE,     0xFE,  	// 0dBm output power

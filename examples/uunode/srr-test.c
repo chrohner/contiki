@@ -90,13 +90,21 @@ int_handler(uint8_t ioid)
         if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 1) {
             srr_config();
         }
+        // both buttons pressed
+        if (ti_lib_gpio_pin_read(BOARD_KEY_RIGHT) == 1) {
+            srr_sniffer_mode = !srr_sniffer_mode;
+        }
     }
     
     
     if (ioid == BOARD_IOID_KEY_RIGHT) {
-        leds_toggle(LEDS_RED);
-        if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 1) {
+        leds_toggle(LEDS_GREEN);
+        if (ti_lib_gpio_pin_read(BOARD_KEY_RIGHT) == 1) {
             srr_start();
+        }
+        // both buttons pressed
+        if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 1) {
+            srr_sniffer_mode = !srr_sniffer_mode;
         }
     }
 }
