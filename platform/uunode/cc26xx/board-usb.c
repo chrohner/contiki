@@ -4,7 +4,7 @@
  * @{
  *
  * \file
- *  Driver for Sportident SRR
+ *  Driver for USB interface
  */
 /*---------------------------------------------------------------------------*/
 #include "contiki.h"

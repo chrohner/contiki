@@ -7,28 +7,18 @@
  *  Driver for Sportident SRR
  */
 /*---------------------------------------------------------------------------*/
+#include <stdio.h>
+#include <string.h>
+
 #include "contiki.h"
 #include "ti-lib.h"
 #include "board-spi.h"
-#include "gpio-interrupt.h"
-#include <stdio.h>
+#include "board-usb.h"
+#include "leds.h"
 
 #include "srr.h"
 #include "srr-const.h"
-#include "leds.h"
 
-/*---------------------------------------------------------------------------*/
-#define GDOx_GPIO_CFG          (IOC_CURRENT_2MA  | IOC_STRENGTH_AUTO | \
-                                IOC_NO_IOPULL    | IOC_SLEW_DISABLE  | \
-                                IOC_HYST_DISABLE | IOC_RISING_EDGE   | \
-                                IOC_INT_ENABLE   | IOC_IOMODE_NORMAL | \
-                                IOC_NO_WAKE_UP   | IOC_INPUT_ENABLE)
-
-#define BUTTON_GPIO_CFG         (IOC_CURRENT_2MA  | IOC_STRENGTH_AUTO | \
-                                 IOC_IOPULL_UP    | IOC_SLEW_DISABLE  | \
-                                 IOC_HYST_DISABLE | IOC_BOTH_EDGES    | \
-                                 IOC_INT_ENABLE   | IOC_IOMODE_NORMAL | \
-                                 IOC_NO_WAKE_UP   | IOC_INPUT_ENABLE)
 
 /*---------------------------------------------------------------------------*/
 struct __attribute__((__packed__)) s_srr_header {
@@ -41,105 +31,243 @@ struct __attribute__((__packed__)) s_srr_header {
     uint8_t p4;
 };
 
-struct __attribute__((__packed__)) s_punch {
-    uint32_t x;
-    uint16_t siCode;
-    uint32_t cardId;
-    uint32_t y;
-    uint8_t u;
-    uint8_t v;
-    uint8_t w;
+struct s_srr_associate_03_request {
+    uint8_t p1;
+    uint8_t p2;
+    uint8_t p3;
+    uint8_t p4;
+    uint8_t p5;
+    uint8_t p6;
 };
 
+struct __attribute__((__packed__)) s_punch {
+    uint16_t x;         // typically 0x6bb6
+    uint8_t cmd;        // 0xd3
+    uint8_t len;        // 0x0d
+    uint16_t siCode;
+    uint32_t cardId;
+    uint32_t time;      // {TD, TH, TL, TSS}
+    uint8_t mem[3];
+};
+
+
+const uint8_t srr_associate_02_response[] = { 0x20, 0x00 };
+const uint8_t srr_associate_03_response[] = { 0xef, 0xbe, 0xae, 0xde, 0x00 };
+const uint8_t srr_ping_ack[] = { 0x00, 0x00, 0x4f, 0x78 };
+
+bool srr_sniffer_mode = false;
+
 /*---------------------------------------------------------------------------*/
-
-
 /**
- * interrupt handler
+ * CRC calculation
  */
-static void
-int_handler(uint8_t ioid)
+#define POLYNOM 0x8005
+
+uint16_t crc(uint8_t uiCount,uint8_t *pucDat)
 {
+    uint8_t iTmp;
+    uint16_t uiTmp,uiTmp1,uiVal;
+    uint8_t *pucTmpDat;
+    
+    if (uiCount < 2) return(0);        // response value is "0" for none or one data byte
+    pucTmpDat = pucDat;
+    
+    uiTmp1 = *pucTmpDat++;
+    uiTmp1 = (uiTmp1<<8) + *pucTmpDat++;
+    
+    if (uiCount == 2) return(uiTmp1);   // response value is CRC for two data bytes
+    for (iTmp=(int)(uiCount>>1);iTmp>0;iTmp--)
+    {
+        
+        if (iTmp>1)
+        {
+            uiVal = *pucTmpDat++;
+            uiVal= (uiVal<<8) + *pucTmpDat++;
+        }
+        else
+        {
+            if (uiCount&1)               // odd number of data bytes, complete with "0"
+            {
+                uiVal = *pucTmpDat;
+                uiVal= (uiVal<<8);
+            }
+            else
+            {
+                uiVal=0; //letzte Werte mit 0
+            }
+        }
+        
+        for (uiTmp=0;uiTmp<16;uiTmp++)
+        {
+            if (uiTmp1 & 0x8000)
+            {
+                uiTmp1  <<= 1;
+                if (uiVal & 0x8000)uiTmp1++;
+                uiTmp1 ^= POLYNOM;
+            }
+            else
+            {
+                uiTmp1  <<= 1;
+                if (uiVal & 0x8000)uiTmp1++;
+            }
+            uiVal <<= 1;
+        }
+    }
+    return(uiTmp1);
+}
+
+void calculateCrc(uint8_t** pCmd) {
+    uint8_t* cmd = *pCmd;
+    uint8_t* tmp = &cmd[1];
+    
+    uint8_t len = cmd[2]&0xff;
+    uint16_t crcValue = 0;
+    
+    crcValue = crc(len+2, (unsigned char*)tmp);
+    
+    cmd[len+3] = ((crcValue&0xff00) >> 8);
+    cmd[len+4] = ((crcValue&0xff));
+}
+
+
+/*---------------------------------------------------------------------------*/
+/**
+ * SRR protocol logic
+ */
+
+#define POLYNOM 0x8005
+
+static void
+srr_protocol(uint8_t *buf, uint8_t len)
+{
+    struct s_srr_header *h;
+    struct s_punch *p;
+    static uint32_t node_id = 0x01020304;
+    static uint8_t cnt = 0;
+    static uint8_t d3[17];
+    uint8_t *_d3 = &(d3[0]);
+
+    h = (struct s_srr_header*)buf;
+    // prepare reply packet
+    h->dest = h->src;
+    h->src = (uint32_t)node_id;
+    srr_cmd(CC2500_SFTX);
+    
+    switch (h->type) {
+        case 0x02:
+            // associate step 3
+            h->p1 = 0x20;
+            h->p2 = cnt++;
+            h->p3 |= 0x80;
+            memcpy(buf+sizeof(struct s_srr_header), srr_associate_02_response, sizeof(srr_associate_02_response));
+            if (!srr_sniffer_mode) {
+                srr_write(CC2500_TXFIFO, buf, sizeof(s_srr_header)+sizeof(srr_associate_02_response));
+                srr_cmd(CC2500_STX);
+            }
+            break;
+        case 0x03:
+            // associate step 2
+            h->p1 |= 0x20;
+            h->p2 = cnt++;
+            h->p3 |= 0x80;
+            memcpy(buf+sizeof(struct s_srr_header), srr_associate_03_response, sizeof(srr_associate_03_response));
+            if (!srr_sniffer_mode) {
+                srr_write(CC2500_TXFIFO, buf, sizeof(s_srr_header)+sizeof(srr_associate_03_response));
+                srr_cmd(CC2500_STX);
+            }
+            break;
+        case 0x05:
+            // associate step 1 (broadcast)
+            h->p1 |= 0x20;
+            h->p3 |= 0x80;
+            if (!srr_sniffer_mode) {
+                srr_write(CC2500_TXFIFO, h, sizeof(s_srr_header));
+                srr_cmd(CC2500_STX);
+            }
+            break;
+        case 0x20:
+            if (buf[sizeof(struct s_srr_header) + 1] == 0xb6) {
+                // punch
+                p = (struct s_punch*)(buf+sizeof(struct s_srr_header));
+                memcpy(d3+1, p+2, sizeof(struct s_punch)-2);
+                d3[0] = 0x02;
+                d3[sizeof(d3)-1] = 0x03;
+                calculateCrc(&_d3);
+                usb_write(d3, sizeof(d3));
+                // pass to application
+                h->type = 0x3d;
+                h->p1 |= 0x20;
+                h->p2 = cnt++;
+                h->p3 = 0x73;
+                h->p4 = 0x60;
+                if (!srr_sniffer_mode) {
+                    srr_write(CC2500_TXFIFO, h, sizeof(s_srr_header));
+                    srr_cmd(CC2500_STX);
+                }
+            } else {
+                // ping
+                h->type = 0x3d;
+                h->p1 |= 0x20;
+                h->p2 = cnt++;
+                h->p3 = 0x73;
+                h->p4 = 0x63;
+                memcpy(buf+sizeof(struct s_srr_header), srr_ping_ack, sizeof(srr_ping_ack));
+                if (!srr_sniffer_mode) {
+                    srr_write(CC2500_TXFIFO, buf, sizeof(s_srr_header)+sizeof(srr_ping_ack));
+                    srr_cmd(CC2500_STX);
+                }
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+/*---------------------------------------------------------------------------*/
+/**
+ * SRR protocol logic
+ */
+
+void
+srr_rx_data() {
     uint8_t buf[64];
     uint8_t num;
     uint8_t i;
-    struct s_srr_header *h;
-    struct s_punch *p;
-    
-    if (ioid == BOARD_IOID_SPI_CC2500_1_GDO0) {
-        leds_toggle(LEDS_RED);
-        printf("SRR RX: ");
 
-        // len
-        srr_read(CC2500_RXFIFO | CC2500_READ, &num, 1);
-        printf("%02x | ", num);
-        // data
-        if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf, num)) {
-            for (i=0; i<num; i++) {
-                printf("%02x ", buf[i]);
-            }
-        }
-        // crc
-        printf("| ");
-        if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf+num, 2)) {
-            for (i=0; i<2; i++) {
-                printf("%02x ", buf[num+i]);
-            }
-        }
-        
-        h = (struct s_srr_header*)buf;
-        // printf("d:%lu s:%lu t:%02x", h->dest, h->src, h->type);
-        if (h->type == 0x20) {
-            p = (struct s_punch*)(buf+sizeof(*h));
-            printf("> %u %lu", p->siCode, p->cardId);
-        }
-        
-        printf("\r\n");
-    }
+    printf("SRR RX: ");
 
-
-    if (ioid == BOARD_IOID_KEY_LEFT) {
-        leds_toggle(LEDS_RED);
-        if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 1) {
-            srr_config();
+    // len
+    srr_read(CC2500_RXFIFO | CC2500_READ, &num, 1);
+    printf("%02x | ", num);
+    // data
+    if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf, num)) {
+        for (i=0; i<num; i++) {
+            printf("%02x ", buf[i]);
         }
     }
-
-    
-    if (ioid == BOARD_IOID_KEY_RIGHT) {
-        leds_toggle(LEDS_RED);
-        if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 1) {
-            srr_start();
+    // crc
+    printf("| ");
+    if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf+num, 2)) {
+        for (i=0; i<2; i++) {
+            printf("%02x ", buf[num+i]);
         }
     }
+    printf("\r\n");
+ 
+    srr_protocol(buf, num);
 }
-
-static void
-int_enable(uint8_t ioid, uint32_t cfg)
-{
-    ti_lib_gpio_event_clear(1 << ioid);
-    ti_lib_ioc_port_configure_set(ioid, IOC_PORT_GPIO, cfg);
-    ti_lib_gpio_dir_mode_set(1 << ioid, GPIO_DIR_MODE_IN);
-    gpio_interrupt_register_handler(ioid, int_handler);
-    ti_lib_ioc_int_enable(ioid);
-}
-
-
 
 
 /*---------------------------------------------------------------------------*/
 /**
- * Clear external flash CSN line
+ * chip select
  */
 static void
 select_on_bus(void)
 {
-  ti_lib_gpio_pin_write(BOARD_SRR1_CS, 0);
+    ti_lib_gpio_pin_write(BOARD_SRR1_CS, 0);
 }
-/*---------------------------------------------------------------------------*/
-/**
- * Set external flash CSN line
- */
+
 static void
 deselect(void)
 {
@@ -268,10 +396,6 @@ srr_reset(void) {
     }; // TODO: don't wait forever!
 
     //board_spi_close();
-    
-    int_enable(BOARD_IOID_KEY_LEFT, BUTTON_GPIO_CFG);
-    int_enable(BOARD_IOID_KEY_RIGHT, BUTTON_GPIO_CFG);
-
 }
 /*---------------------------------------------------------------------------*/
 /**
@@ -316,18 +440,6 @@ srr_config(void) {
         leds_off(LEDS_RED);
     }
     
-    // SIDLE, SNOP, SRFRX
-    
-    /*
-    while (i < sizeof(cc2500_srr_idle)-1) {
-        // set configuration
-        srr_cmd(cc2500_srr_idle[i]);
-        clock_delay_usec(100); // not necessary
-        i += 1;
-    }
-     */
-
-    //srr_cmd(CC2500_SRX);
     clock_delay_usec(100);
 }
 
@@ -340,7 +452,6 @@ srr_start() {
     srr_cmd(CC2500_SRX);
     
     clock_delay_usec(809);   // IDLE->RX with calibration (section 19.6)
-    int_enable(BOARD_IOID_SPI_CC2500_1_GDO0, GDOx_GPIO_CFG);
 }
 /*---------------------------------------------------------------------------*/
 /** @} */

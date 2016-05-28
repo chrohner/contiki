@@ -41,7 +41,7 @@
  * Definitions for the TI CC2500 2.4 GHz transceiver. See the datasheet.
  */
 /* configuration registers, can be read and written in burst. */
-#define CC2500_IOCFG2         0x00
+#define CC2500_IOCFG2           0x00
 #define CC2500_IOCFG1       	0x01
 #define CC2500_IOCFG0       	0x02
 #define CC2500_FIFOTHR      	0x03

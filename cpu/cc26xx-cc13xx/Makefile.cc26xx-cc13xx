@@ -1,11 +1,12 @@
-CC      = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-gcc
-CPP     = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-cpp
-LD      = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-gcc
-AR      = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-ar
-OBJCOPY = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-objcopy
-OBJDUMP = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-objdump
-NM      = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-nm
-SIZE    = /usr/local/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-size
+GCC_PATH = /usr/local/gcc-arm-none-eabi/bin
+CC      = $(GCC_PATH)/arm-none-eabi-gcc
+CPP     = $(GCC_PATH)/arm-none-eabi-cpp
+LD      = $(GCC_PATH)/arm-none-eabi-gcc
+AR      = $(GCC_PATH)/arm-none-eabi-ar
+OBJCOPY = $(GCC_PATH)/arm-none-eabi-objcopy
+OBJDUMP = $(GCC_PATH)/arm-none-eabi-objdump
+NM      = $(GCC_PATH)/arm-none-eabi-nm
+SIZE    = $(GCC_PATH)/arm-none-eabi-size
 SREC_CAT = srec_cat
 
 CPU_ABS_PATH       = cpu/cc26xx-cc13xx

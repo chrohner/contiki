@@ -43,6 +43,7 @@
 
 #include "ti-lib.h"
 
+#include "gpio-interrupt.h"
 #include "board-spi.h"
 #include "board-usb.h"
 #include "srr.h"
@@ -58,36 +59,77 @@ static int counter_stimer;
 static struct timer timer_timer;
 static struct stimer timer_stimer;
 
+/*---------------------------------------------------------------------------*/
+#define GDOx_GPIO_CFG          (IOC_CURRENT_2MA  | IOC_STRENGTH_AUTO | \
+                                IOC_NO_IOPULL    | IOC_SLEW_DISABLE  | \
+                                IOC_HYST_DISABLE | IOC_RISING_EDGE   | \
+                                IOC_INT_ENABLE   | IOC_IOMODE_NORMAL | \
+                                IOC_NO_WAKE_UP   | IOC_INPUT_ENABLE)
+
+#define BUTTON_GPIO_CFG        (IOC_CURRENT_2MA  | IOC_STRENGTH_AUTO | \
+                                IOC_IOPULL_UP    | IOC_SLEW_DISABLE  | \
+                                IOC_HYST_DISABLE | IOC_BOTH_EDGES    | \
+                                IOC_INT_ENABLE   | IOC_IOMODE_NORMAL | \
+                                IOC_NO_WAKE_UP   | IOC_INPUT_ENABLE)
+
+/*---------------------------------------------------------------------------*/
+/**
+ * interrupt handler
+ */
+static void
+int_handler(uint8_t ioid)
+{
+    if (ioid == BOARD_IOID_SPI_CC2500_1_GDO0) {
+        leds_toggle(LEDS_RED);
+        srr_rx_data();
+    }
+    
+    
+    if (ioid == BOARD_IOID_KEY_LEFT) {
+        leds_toggle(LEDS_RED);
+        if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 1) {
+            srr_config();
+        }
+    }
+    
+    
+    if (ioid == BOARD_IOID_KEY_RIGHT) {
+        leds_toggle(LEDS_RED);
+        if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 1) {
+            srr_start();
+        }
+    }
+}
 
 
+static void
+int_enable(uint8_t ioid, uint32_t cfg)
+{
+    ti_lib_gpio_event_clear(1 << ioid);
+    ti_lib_ioc_port_configure_set(ioid, IOC_PORT_GPIO, cfg);
+    ti_lib_gpio_dir_mode_set(1 << ioid, GPIO_DIR_MODE_IN);
+    gpio_interrupt_register_handler(ioid, int_handler);
+    ti_lib_ioc_int_enable(ioid);
+}
+/*---------------------------------------------------------------------------*/
+/**
+ * periodic timeout handler
+ */
 void
 do_timeout1()
 {
-    /* CC2500 example: set and read back channel and compare */
-    /* alternate between blue and red channel, test for blue ->> red LED blinking */
-
-    static uint8_t cnt = 0;
-    uint8_t buf = 0x00;
-    uint32_t ret;
-    
     leds_on(LEDS_GREEN);
     clock_delay_usec(1000);  // LEDS be on at least for 1ms
     leds_off(LEDS_GREEN);
 
-    // read register
-    ret = srr_read(CC2500_READ | cnt%(0x30), &buf, 1);
-    printf("spi: %02x: %02x  (%02x)\r\n", cnt, buf, (uint8_t)(ret & 0xff));
-    cnt++;
-    
-  counter_etimer++;
-  if(timer_expired(&timer_timer)) {
-    counter_timer++;
-  }
+    counter_etimer++;
+    if(timer_expired(&timer_timer)) {
+        counter_timer++;
+    }
 
-  if(stimer_expired(&timer_stimer)) {
-    counter_stimer++;
-  }
-
+    if(stimer_expired(&timer_stimer)) {
+        counter_stimer++;
+    }
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(process1, ev, data)
@@ -99,11 +141,15 @@ PROCESS_THREAD(process1, ev, data)
     srr_reset();
 //    srr_config();
     
-  while(1) {
-    etimer_set(&timer_etimer, 4 * CLOCK_SECOND);
-    PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
-    do_timeout1();
-  }
+    int_enable(BOARD_IOID_SPI_CC2500_1_GDO0, GDOx_GPIO_CFG);
+    int_enable(BOARD_IOID_KEY_LEFT, BUTTON_GPIO_CFG);
+    int_enable(BOARD_IOID_KEY_RIGHT, BUTTON_GPIO_CFG);
     
-  PROCESS_END();
+    while(1) {
+        etimer_set(&timer_etimer, 4 * CLOCK_SECOND);
+        PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
+        do_timeout1();
+    }
+    
+    PROCESS_END();
 }
