@@ -47,7 +47,7 @@ static const uint8_t cc2500_srr_version[] = {
 
 static const uint8_t cc2500_srr_config[] = {
 
-CC2500_IOCFG2,      0x1B,	// PA_PD
+CC2500_IOCFG2,      IOCFG_GDO_CFG_CS,	// carrier sense
 CC2500_IOCFG0,      IOCFG_GDO_CFG_PKT_SYNCW_EOP,
 
 CC2500_FIFOTHR,     0x15,   // (TX: 1) RX: 64

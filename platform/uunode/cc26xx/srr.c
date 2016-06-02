@@ -314,7 +314,7 @@ srr_handle_interrupt(uint8_t ioid) {
                 srr_cmd(CC2500_SRX);
                 break;
             default:
-                // under/overflow or other states
+                // under/overflow (or unexpected state)
                 srr_cmd(CC2500_SIDLE);
                 srr_cmd(CC2500_SNOP);
                 srr_cmd(CC2500_SFRX);
