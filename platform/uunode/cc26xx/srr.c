@@ -132,10 +132,16 @@ void calculateCrc(uint8_t** pCmd) {
 
 /*---------------------------------------------------------------------------*/
 /**
+ * punch
+ */
+
+
+
+/*---------------------------------------------------------------------------*/
+/**
  * SRR protocol logic
  */
 
-#define POLYNOM 0x8005
 
 static void
 srr_protocol(uint8_t *buf, uint8_t len)
@@ -152,6 +158,9 @@ srr_protocol(uint8_t *buf, uint8_t len)
     // prepare reply packet
     h->dest = h->src;
     h->src = (uint32_t)node_id;
+
+    srr_cmd(CC2500_SIDLE);
+    srr_cmd(CC2500_SNOP);
     srr_cmd(CC2500_SFTX);
     
     switch (h->type) {
@@ -182,31 +191,38 @@ srr_protocol(uint8_t *buf, uint8_t len)
             h->p1 |= 0x20;
             h->p3 |= 0x80;
             if (!srr_sniffer_mode) {
-                srr_write(CC2500_TXFIFO | CC2500_BURSTWRITE, (uint8_t *)h, sizeof(struct s_srr_header));
+                srr_write(CC2500_TXFIFO | CC2500_BURSTWRITE, buf, sizeof(struct s_srr_header));
                 srr_cmd(CC2500_STX);
             }
             break;
         case 0x20:
             if (buf[sizeof(struct s_srr_header) + 1] == 0xb6) {
                 // punch
-                p = (struct s_punch*)(buf+sizeof(struct s_srr_header));
-                memcpy(d3+1, p+2, sizeof(struct s_punch)-2);
-                d3[0] = 0x02;
-                d3[sizeof(d3)-1] = 0x03;
-                calculateCrc(&_d3);
-                usb_write(d3, sizeof(d3));
-                // pass to application
+
+                // ack
                 h->type = 0x3d;
                 h->p1 |= 0x20;
                 h->p2 = cnt++;
                 h->p3 = 0x73;
                 h->p4 = 0x60;
                 if (!srr_sniffer_mode) {
-                    srr_write(CC2500_TXFIFO | CC2500_BURSTWRITE, (uint8_t *)h, sizeof(struct s_srr_header));
+                    srr_cmd(CC2500_SFTX);
+                    srr_write(CC2500_TXFIFO | CC2500_BURSTWRITE, buf, sizeof(struct s_srr_header));
                     srr_cmd(CC2500_STX);
                 }
+
+                // pass to application (TODO: move to separate function, maintain buffer, etc)
+                p = (struct s_punch*)(buf+sizeof(struct s_srr_header));
+                memcpy(d3+1, p+2, sizeof(struct s_punch)-2);
+                d3[0] = 0x02;
+                d3[sizeof(d3)-1] = 0x03;
+                calculateCrc(&_d3);
+                //usb_write(d3, sizeof(d3));
+            
             } else {
                 // ping
+                
+                // ack
                 h->type = 0x3d;
                 h->p1 |= 0x20;
                 h->p2 = cnt++;
@@ -220,42 +236,93 @@ srr_protocol(uint8_t *buf, uint8_t len)
             }
             break;
         default:
+            // unknown type (suspect error, flush RXFIFO)
+            srr_cmd(CC2500_SFRX);
+            srr_cmd(CC2500_SRX);
             break;
     }
+
 }
+
 
 /*---------------------------------------------------------------------------*/
 /**
- * SRR protocol logic
+ * handling with interrupts (read data, or switch into rx)
  */
 
 void
-srr_rx_data() {
+srr_rx_data(uint8_t ioid) {
     uint8_t buf[64];
     uint8_t num;
     uint8_t i;
+    uint8_t rssi_lqi[2];
 
+    leds_on(LEDS_RED);
     printf("SRR RX: ");
 
     // len
     srr_read(CC2500_RXFIFO | CC2500_READ, &num, 1);
     printf("%02x | ", num);
-    // data
-    if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf, num)) {
-        for (i=0; i<num; i++) {
-            printf("%02x ", buf[i]);
+    if (num>63) {
+        // limit to the buf size (but probably out of synch)
+        num = 63;
+        printf("(limited to %02x) | ", num);
+    } else if (num>0) {
+        // data
+        if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf, num)) {
+            for (i=0; i<num; i++) {
+                printf("%02x ", buf[i]);
+            }
         }
-    }
-    // crc
-    printf("| ");
-    if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf+num, 2)) {
-        for (i=0; i<2; i++) {
-            printf("%02x ", buf[num+i]);
+        // crc
+        printf("| ");
+        if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf+num, 2)) {
+            for (i=0; i<2; i++) {
+                printf("%02x ", buf[num+i]);
+            }
+        }
+        if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, rssi_lqi, 2)) {
+            if (rssi_lqi[1]&0x80) {
+                // CRC ok
+                srr_protocol(buf, num);
+            } else {
+                printf("(error)");
+            }
         }
     }
     printf("\r\n");
- 
-    srr_protocol(buf, num);
+    
+    leds_off(LEDS_RED);
+}
+
+void
+srr_handle_interrupt(uint8_t ioid) {
+    uint8_t state;
+
+    if (srr_read(CC2500_MARCSTATE | CC2500_READ, &state, 1)) {
+        printf("state: %02x\r\n", state);
+        switch (state) {
+            case 0x0d: // RX
+            case 0x0e: // RX END
+            case 0x0f: // RX RST
+                // received packet
+                srr_rx_data(ioid);
+                break;
+            case 0x13: // TX
+            case 0x14: // TX END
+                // TX finished
+                srr_cmd(CC2500_SRX);
+                break;
+            default:
+                // under/overflow or other states
+                srr_cmd(CC2500_SIDLE);
+                srr_cmd(CC2500_SNOP);
+                srr_cmd(CC2500_SFRX);
+                srr_cmd(CC2500_SFTX);
+                srr_cmd(CC2500_SRX);
+                break;
+        }
+    }
 }
 
 
@@ -310,7 +377,6 @@ srr_read(const uint8_t addr, uint8_t *buf, uint8_t len)
     board_spi_read(buf, len);
     
     deselect();
-
     return ret;
 }
 /*---------------------------------------------------------------------------*/
@@ -324,18 +390,20 @@ srr_write(const uint8_t addr, const uint8_t *buf, uint8_t len)
         /* failure */
         deselect();
         return false;
-    };
-
+    }
+    
+    if (addr == (CC2500_TXFIFO | CC2500_BURSTWRITE)) {
+        board_spi_write(&len, 1);
+    }
+    
     if (board_spi_write(buf, len) == false) {
       /* failure */
       deselect();
       return false;
     }
-    clock_delay_usec(1);
     
     deselect();
-
-  return true;
+    return true;
 }
 /*---------------------------------------------------------------------------*/
 /**
@@ -408,9 +476,6 @@ srr_config(void) {
     bool ret;
     static uint8_t i = 0;
     
-    leds_on(LEDS_GREEN);
-    leds_on(LEDS_RED);
-
     // write the configuration
     for (i=0; i < sizeof(cc2500_srr_config); i+=2) {
         srr_write(cc2500_srr_config[i], &cc2500_srr_config[i+1], 1);
@@ -429,17 +494,6 @@ srr_config(void) {
         }
     }
     
-    
-    // read CC2500_CHANNR to verify
-    ret = srr_read(CC2500_READ | CC2500_IOCFG0, &buf, 1);
-    if (ret) {
-        leds_off(LEDS_GREEN);
-    }
-    
-    if (buf == IOCFG_GDO_CFG_PKT_SYNCW_EOP) {
-        leds_off(LEDS_RED);
-    }
-    
     clock_delay_usec(100);
 }
 
@@ -452,6 +506,7 @@ srr_start() {
     srr_cmd(CC2500_SRX);
     
     clock_delay_usec(809);   // IDLE->RX with calibration (section 19.6)
+
 }
 /*---------------------------------------------------------------------------*/
 /** @} */

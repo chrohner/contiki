@@ -62,13 +62,13 @@ static struct stimer timer_stimer;
 /*---------------------------------------------------------------------------*/
 #define GDOx_GPIO_CFG          (IOC_CURRENT_2MA  | IOC_STRENGTH_AUTO | \
                                 IOC_NO_IOPULL    | IOC_SLEW_DISABLE  | \
-                                IOC_HYST_DISABLE | IOC_RISING_EDGE   | \
+                                IOC_HYST_DISABLE | IOC_FALLING_EDGE  | \
                                 IOC_INT_ENABLE   | IOC_IOMODE_NORMAL | \
                                 IOC_NO_WAKE_UP   | IOC_INPUT_ENABLE)
 
 #define BUTTON_GPIO_CFG        (IOC_CURRENT_2MA  | IOC_STRENGTH_AUTO | \
                                 IOC_IOPULL_UP    | IOC_SLEW_DISABLE  | \
-                                IOC_HYST_DISABLE | IOC_BOTH_EDGES    | \
+                                IOC_HYST_DISABLE | IOC_RISING_EDGE   | \
                                 IOC_INT_ENABLE   | IOC_IOMODE_NORMAL | \
                                 IOC_NO_WAKE_UP   | IOC_INPUT_ENABLE)
 
@@ -76,37 +76,41 @@ static struct stimer timer_stimer;
 /**
  * interrupt handler
  */
+static void int_enable(uint8_t ioid, uint32_t cfg);
+
 static void
 int_handler(uint8_t ioid)
 {
+
     if (ioid == BOARD_IOID_SPI_CC2500_1_GDO0) {
         leds_toggle(LEDS_RED);
-        srr_rx_data();
+        srr_handle_interrupt(ioid);
     }
     
     
     if (ioid == BOARD_IOID_KEY_LEFT) {
         leds_toggle(LEDS_RED);
-        if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 1) {
-            srr_config();
-        }
+        srr_config();
+
         // both buttons pressed
-        if (ti_lib_gpio_pin_read(BOARD_KEY_RIGHT) == 1) {
-            srr_sniffer_mode = !srr_sniffer_mode;
+        if (ti_lib_gpio_pin_read(BOARD_KEY_RIGHT) == 0) {
+            //srr_sniffer_mode = !srr_sniffer_mode;
         }
     }
     
     
     if (ioid == BOARD_IOID_KEY_RIGHT) {
         leds_toggle(LEDS_GREEN);
-        if (ti_lib_gpio_pin_read(BOARD_KEY_RIGHT) == 1) {
-            srr_start();
-        }
+        srr_start();
+        int_enable(BOARD_IOID_SPI_CC2500_1_GDO0, GDOx_GPIO_CFG);
+        printf("srr started\r\n");
+
         // both buttons pressed
-        if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 1) {
-            srr_sniffer_mode = !srr_sniffer_mode;
+        if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 0) {
+            //srr_sniffer_mode = !srr_sniffer_mode;
         }
     }
+
 }
 
 
@@ -126,10 +130,20 @@ int_enable(uint8_t ioid, uint32_t cfg)
 void
 do_timeout1()
 {
+    static uint8_t cnt = 0;
+    uint8_t buf = 0x00;
+    uint32_t ret;
+    
     leds_on(LEDS_GREEN);
     clock_delay_usec(1000);  // LEDS be on at least for 1ms
     leds_off(LEDS_GREEN);
 
+    // read register
+    ret = srr_read(CC2500_READ | cnt%(0x30), &buf, 1);
+    printf("spi: %02x: %02x  (%02x)\r\n", cnt, buf, (uint8_t)(ret & 0xff));
+    cnt++;
+    
+    
     counter_etimer++;
     if(timer_expired(&timer_timer)) {
         counter_timer++;
@@ -149,12 +163,11 @@ PROCESS_THREAD(process1, ev, data)
     srr_reset();
 //    srr_config();
     
-    int_enable(BOARD_IOID_SPI_CC2500_1_GDO0, GDOx_GPIO_CFG);
     int_enable(BOARD_IOID_KEY_LEFT, BUTTON_GPIO_CFG);
     int_enable(BOARD_IOID_KEY_RIGHT, BUTTON_GPIO_CFG);
     
     while(1) {
-        etimer_set(&timer_etimer, 4 * CLOCK_SECOND);
+        etimer_set(&timer_etimer, 5 * CLOCK_SECOND);
         PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
         do_timeout1();
     }
