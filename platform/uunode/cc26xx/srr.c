@@ -52,7 +52,7 @@ struct __attribute__((__packed__)) s_punch {
 
 
 const uint8_t srr_associate_02_response[] = { 0x20, 0x00 };
-const uint8_t srr_associate_03_response[] = { 0xef, 0xbe, 0xae, 0xde, 0x00 };
+const uint8_t srr_associate_03_response[] = { 0xef, 0xbe, 0xad, 0xde, 0x00 };
 const uint8_t srr_ping_ack[] = { 0x00, 0x00, 0x4f, 0x78 };
 
 bool srr_sniffer_mode = false;
@@ -159,9 +159,12 @@ srr_protocol(uint8_t *buf, uint8_t len)
     h->dest = h->src;
     h->src = (uint32_t)node_id;
 
-    srr_cmd(CC2500_SIDLE);
-    srr_cmd(CC2500_SNOP);
-    srr_cmd(CC2500_SFTX);
+    if (!srr_sniffer_mode) {
+        srr_cmd(CC2500_SIDLE);
+        srr_cmd(CC2500_SNOP);
+        srr_cmd(CC2500_SFTX);
+    }
+    
     
     switch (h->type) {
         case 0x02:
@@ -201,12 +204,11 @@ srr_protocol(uint8_t *buf, uint8_t len)
 
                 // ack
                 h->type = 0x3d;
-                h->p1 |= 0x20;
+                h->p1 = 0x23;
                 h->p2 = cnt++;
                 h->p3 = 0x73;
                 h->p4 = 0x60;
                 if (!srr_sniffer_mode) {
-                    srr_cmd(CC2500_SFTX);
                     srr_write(CC2500_TXFIFO | CC2500_BURSTWRITE, buf, sizeof(struct s_srr_header));
                     srr_cmd(CC2500_STX);
                 }
@@ -217,8 +219,8 @@ srr_protocol(uint8_t *buf, uint8_t len)
                 d3[0] = 0x02;
                 d3[sizeof(d3)-1] = 0x03;
                 calculateCrc(&_d3);
-                //usb_write(d3, sizeof(d3));
-            
+                // usb_write(d3, sizeof(d3));
+
             } else {
                 // ping
                 
@@ -255,19 +257,20 @@ srr_rx_data(uint8_t ioid) {
     uint8_t buf[64];
     uint8_t num;
     uint8_t i;
-    uint8_t rssi_lqi[2];
 
     leds_on(LEDS_RED);
-    printf("SRR RX: ");
 
-    // len
-    srr_read(CC2500_RXFIFO | CC2500_READ, &num, 1);
-    printf("%02x | ", num);
-    if (num>63) {
-        // limit to the buf size (but probably out of synch)
-        num = 63;
-        printf("(limited to %02x) | ", num);
-    } else if (num>0) {
+    // len (check register, autoflush might have cleared FIFO)
+    srr_read(CC2500_RXBYTES | CC2500_BURSTREAD, &num, 1);
+    if ((num&0x7f) > 0) {
+        printf("SRR RX: ");
+        srr_read(CC2500_RXFIFO | CC2500_READ, &num, 1);
+        printf("%02x | ", num);
+        if (num > 63) {
+            // limit to the buf size (but probably out of synch)
+            num = 63;
+            printf("(limited to %02x) | ", num);
+        }
         // data
         if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf, num)) {
             for (i=0; i<num; i++) {
@@ -275,32 +278,27 @@ srr_rx_data(uint8_t ioid) {
             }
         }
         // crc
-        printf("| ");
-        if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf+num, 2)) {
-            for (i=0; i<2; i++) {
-                printf("%02x ", buf[num+i]);
-            }
-        }
-        if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, rssi_lqi, 2)) {
-            if (rssi_lqi[1]&0x80) {
-                // CRC ok
-                srr_protocol(buf, num);
-            } else {
-                printf("(error)");
-            }
-        }
+//        printf("| ");
+//        if (srr_read(CC2500_RXFIFO | CC2500_BURSTREAD, buf+num, 2)) {
+//            for (i=0; i<2; i++) {
+//                printf("%02x ", buf[num+i]);
+//            }
+//        }
+        
+        srr_protocol(buf, num);
+        printf("\r\n");
     }
-    printf("\r\n");
     
     leds_off(LEDS_RED);
 }
+
 
 void
 srr_handle_interrupt(uint8_t ioid) {
     uint8_t state;
 
-    if (srr_read(CC2500_MARCSTATE | CC2500_READ, &state, 1)) {
-        printf("state: %02x\r\n", state);
+    if (srr_read(CC2500_MARCSTATE | CC2500_BURSTREAD, &state, 1)) {
+        state &= 0x1f;
         switch (state) {
             case 0x0d: // RX
             case 0x0e: // RX END

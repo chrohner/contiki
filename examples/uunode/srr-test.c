@@ -107,7 +107,8 @@ int_handler(uint8_t ioid)
 
         // both buttons pressed
         if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 0) {
-            //srr_sniffer_mode = !srr_sniffer_mode;
+            srr_sniffer_mode = !srr_sniffer_mode;
+            printf("sniffer mode %u\r\n", (uint8_t)srr_sniffer_mode);
         }
     }
 
