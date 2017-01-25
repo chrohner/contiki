@@ -76,7 +76,7 @@ static struct stimer timer_stimer;
 /**
  * interrupt handler
  */
-static void int_enable(uint8_t ioid, uint32_t cfg);
+static void int_enable(uint32_t ioid, uint32_t cfg);
 
 static void
 int_handler(uint8_t ioid)
@@ -93,7 +93,7 @@ int_handler(uint8_t ioid)
         srr_config();
 
         // both buttons pressed
-        if (ti_lib_gpio_pin_read(BOARD_KEY_RIGHT) == 0) {
+        if (ti_lib_gpio_read_dio(BOARD_KEY_RIGHT) == 0) {
             //srr_sniffer_mode = !srr_sniffer_mode;
         }
     }
@@ -102,11 +102,11 @@ int_handler(uint8_t ioid)
     if (ioid == BOARD_IOID_KEY_RIGHT) {
         leds_toggle(LEDS_GREEN);
         srr_start();
-        int_enable(BOARD_IOID_SPI_CC2500_1_GDO0, GDOx_GPIO_CFG);
+        int_enable(BOARD_SRR1_GDO0, GDOx_GPIO_CFG);
         printf("srr started\r\n");
 
         // both buttons pressed
-        if (ti_lib_gpio_pin_read(BOARD_KEY_LEFT) == 0) {
+        if (ti_lib_gpio_read_dio(BOARD_KEY_LEFT) == 0) {
             srr_sniffer_mode = !srr_sniffer_mode;
             printf("sniffer mode %u\r\n", (uint8_t)srr_sniffer_mode);
         }
@@ -116,11 +116,11 @@ int_handler(uint8_t ioid)
 
 
 static void
-int_enable(uint8_t ioid, uint32_t cfg)
+int_enable(uint32_t ioid, uint32_t cfg)
 {
-    ti_lib_gpio_event_clear(1 << ioid);
+    ti_lib_gpio_clear_event_dio(ioid);
     ti_lib_ioc_port_configure_set(ioid, IOC_PORT_GPIO, cfg);
-    ti_lib_gpio_dir_mode_set(1 << ioid, GPIO_DIR_MODE_IN);
+    ti_lib_rom_ioc_pin_type_gpio_input(ioid);
     gpio_interrupt_register_handler(ioid, int_handler);
     ti_lib_ioc_int_enable(ioid);
 }
@@ -164,8 +164,11 @@ PROCESS_THREAD(process1, ev, data)
     srr_reset();
 //    srr_config();
     
-    int_enable(BOARD_IOID_KEY_LEFT, BUTTON_GPIO_CFG);
-    int_enable(BOARD_IOID_KEY_RIGHT, BUTTON_GPIO_CFG);
+    int_enable(BOARD_KEY_LEFT, BUTTON_GPIO_CFG);
+    int_enable(BOARD_KEY_RIGHT, BUTTON_GPIO_CFG);
+    
+    // put TinyMesh to sleep
+    ti_lib_gpio_write_dio(1 << BOARD_IOID_MESH_SLEEP, 0);
     
     while(1) {
         etimer_set(&timer_etimer, 5 * CLOCK_SECOND);
