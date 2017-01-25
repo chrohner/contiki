@@ -120,11 +120,13 @@
 
 #define NETSTACK_RADIO_MAX_PAYLOAD_LEN        125
 
+#define INT_AON_RTC_COMB                    20   // roh
+
 /* 6LoWPAN */
-#define SICSLOWPAN_CONF_COMPRESSION          SICSLOWPAN_COMPRESSION_HC06
-#define SICSLOWPAN_CONF_COMPRESSION_THRESHOLD  63
-#define SICSLOWPAN_CONF_FRAG                    1
-#define SICSLOWPAN_CONF_MAXAGE                  8
+//#define SICSLOWPAN_CONF_COMPRESSION          SICSLOWPAN_COMPRESSION_HC06
+//#define SICSLOWPAN_CONF_COMPRESSION_THRESHOLD  63
+//#define SICSLOWPAN_CONF_FRAG                    1
+//#define SICSLOWPAN_CONF_MAXAGE                  8
 /** @} */
 /*---------------------------------------------------------------------------*/
 /**
