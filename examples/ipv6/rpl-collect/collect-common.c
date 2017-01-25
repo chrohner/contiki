@@ -41,6 +41,7 @@
 #include "dev/serial-line.h"
 #include "dev/leds.h"
 #include "collect-common.h"
+#include "leds.h"
 
 #include <stdio.h>
 #include <string.h>

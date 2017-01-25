@@ -33,6 +33,7 @@
 #include "net/ip/uip.h"
 #include "net/rpl/rpl.h"
 #include "net/linkaddr.h"
+#include "leds.h"
 
 #include "net/netstack.h"
 #include "dev/button-sensor.h"
@@ -108,6 +109,11 @@ tcpip_handler(void)
     hops = uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1;
     collect_common_recv(&sender, seqno, hops,
                         appdata + 2, uip_datalen() - 2);
+      
+      leds_on(LEDS_RED);
+      clock_delay_usec(1000);  // LEDS be on at least for 1ms
+      leds_off(LEDS_RED);
+      
   }
 }
 /*---------------------------------------------------------------------------*/

@@ -40,6 +40,7 @@
 #endif
 #include "collect-common.h"
 #include "collect-view.h"
+#include "leds.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -156,6 +157,12 @@ collect_common_send(void)
 
   uip_udp_packet_sendto(client_conn, &msg, sizeof(msg),
                         &server_ipaddr, UIP_HTONS(UDP_SERVER_PORT));
+
+    leds_on(LEDS_GREEN);
+    clock_delay_usec(1000);  // LEDS be on at least for 1ms
+    leds_off(LEDS_GREEN);
+
+
 }
 /*---------------------------------------------------------------------------*/
 void
