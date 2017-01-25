@@ -168,7 +168,7 @@ PROCESS_THREAD(node_process, ev, data)
    * */
   static int is_coordinator = 0;
   static enum { role_6ln, role_6dr, role_6dr_sec } node_role;
-  node_role = role_6ln;
+  node_role = role_6dr;
 
   /* Set node with MAC address c1:0c:00:00:00:00:01 as coordinator,
    * convenient in cooja for regression tests using z1 nodes
