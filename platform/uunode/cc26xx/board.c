@@ -75,7 +75,7 @@ shutdown_handler(uint8_t mode)
     SENSORS_DEACTIVATE(tmp_007_sensor);
     SENSORS_DEACTIVATE(hdc_1000_sensor);
     SENSORS_DEACTIVATE(mpu_9250_sensor);
-    ti_lib_gpio_pin_clear(BOARD_MPU_POWER);
+    ti_lib_gpio_clear_dio(BOARD_MPU_POWER);
   }
 
   /* In all cases, stop the I2C */
@@ -95,16 +95,20 @@ LPM_MODULE(sensortag_module, NULL, shutdown_handler, lpm_wakeup_handler,
 static void
 configure_unused_pins(void)
 {
-  /* Digital Microphone */
-  ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_MIC_POWER);
-  ti_lib_gpio_pin_clear((1 << BOARD_IOID_MIC_POWER));
-  ti_lib_ioc_io_drv_strength_set(BOARD_IOID_MIC_POWER, IOC_CURRENT_2MA,
-                                 IOC_STRENGTH_MIN);
+    
+    /* Digital Microphone */
+    ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_MIC_POWER);
+    ti_lib_gpio_clear_dio(BOARD_IOID_MIC_POWER);
+    ti_lib_ioc_io_drv_strength_set(BOARD_IOID_MIC_POWER, IOC_CURRENT_2MA,
+                                   IOC_STRENGTH_MIN);
+    
+    ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_AUDIO_DI);
+    ti_lib_ioc_io_port_pull_set(BOARD_IOID_AUDIO_DI, IOC_IOPULL_DOWN);
+    ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_AUDIO_CLK);
+    ti_lib_ioc_io_port_pull_set(BOARD_IOID_AUDIO_CLK, IOC_IOPULL_DOWN);
 
-  ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_AUDIO_DI);
-  ti_lib_ioc_io_port_pull_set(BOARD_IOID_AUDIO_DI, IOC_IOPULL_DOWN);
-  ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_AUDIO_CLK);
-  ti_lib_ioc_io_port_pull_set(BOARD_IOID_AUDIO_CLK, IOC_IOPULL_DOWN);
+
+
 }
 /*---------------------------------------------------------------------------*/
 void

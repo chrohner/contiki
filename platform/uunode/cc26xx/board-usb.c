@@ -33,7 +33,7 @@
 static void
 select_on_bus(void)
 {
-  ti_lib_gpio_pin_write(BOARD_USB_CS, 0);
+  ti_lib_gpio_write_dio(BOARD_USB_CS, 0);
 }
 /*---------------------------------------------------------------------------*/
 /**
@@ -42,7 +42,7 @@ select_on_bus(void)
 static void
 deselect(void)
 {
-  ti_lib_gpio_pin_write(BOARD_USB_CS, 1);
+  ti_lib_gpio_write_dio(BOARD_USB_CS, 1);
 }
 /*---------------------------------------------------------------------------*/
 bool

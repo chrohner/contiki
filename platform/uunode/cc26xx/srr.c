@@ -331,13 +331,13 @@ srr_handle_interrupt(uint8_t ioid) {
 static void
 select_on_bus(void)
 {
-    ti_lib_gpio_pin_write(BOARD_SRR1_CS, 0);
+    ti_lib_gpio_write_dio(BOARD_SRR1_CS, 0);
 }
 
 static void
 deselect(void)
 {
-  ti_lib_gpio_pin_write(BOARD_SRR1_CS, 1);
+  ti_lib_gpio_write_dio(BOARD_SRR1_CS, 1);
 }
 /*---------------------------------------------------------------------------*/
 bool
@@ -437,16 +437,16 @@ srr_reset(void) {
     ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_SPI_CC2500_1_CS);
     
     // SCLK=1, SI=0, strobe CSn
-    ti_lib_gpio_pin_write(1 << BOARD_IOID_SPI_CLK, 1);
-    ti_lib_gpio_pin_write(1 << BOARD_IOID_SPI_MOSI, 0);
-    ti_lib_gpio_pin_write(BOARD_SRR1_CS, 0);
+    ti_lib_gpio_write_dio(1 << BOARD_IOID_SPI_CLK, 1);
+    ti_lib_gpio_write_dio(1 << BOARD_IOID_SPI_MOSI, 0);
+    ti_lib_gpio_write_dio(BOARD_SRR1_CS, 0);
     clock_delay_usec(10);
-    ti_lib_gpio_pin_write(BOARD_SRR1_CS, 1);
+    ti_lib_gpio_write_dio(BOARD_SRR1_CS, 1);
 
     // wait 40us, pull CSn low, wait for SO to go low
     clock_delay_usec(40);
-    ti_lib_gpio_pin_write(BOARD_SRR1_CS, 0);
-    while (ti_lib_gpio_pin_read(1 << BOARD_IOID_SPI_MISO) == 1) {
+    ti_lib_gpio_write_dio(BOARD_SRR1_CS, 0);
+    while (ti_lib_gpio_read_dio(1 << BOARD_IOID_SPI_MISO) == 1) {
         clock_delay_usec(1);
     }; // TODO: don't wait forever!
 
@@ -455,9 +455,9 @@ srr_reset(void) {
     board_spi_write(&res, 1);
 
     // release CSn, wait for SO to go low
-    ti_lib_gpio_pin_write(BOARD_SRR1_CS, 1);
+    ti_lib_gpio_write_dio(BOARD_SRR1_CS, 1);
     // ti_lib_ioc_pin_type_gpio_input(BOARD_IOID_SPI_MISO);
-    while (ti_lib_gpio_pin_read(1 << BOARD_IOID_SPI_MISO) == 1) {
+    while (ti_lib_gpio_read_dio(1 << BOARD_IOID_SPI_MISO) == 1) {
         clock_delay_usec(1);
     }; // TODO: don't wait forever!
 
