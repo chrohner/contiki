@@ -81,6 +81,14 @@ LPM_MODULE(sensortag_module, NULL, shutdown_handler, lpm_wakeup_handler,
            LPM_DOMAIN_NONE);
 /*---------------------------------------------------------------------------*/
 static void
+config_gpio(uint32_t ioid)
+{
+    ti_lib_ioc_pin_type_gpio_output(ioid);
+    ti_lib_gpio_write_dio(ioid, 0);
+}
+
+
+static void
 configure_range_extender(void)     // ROH
 {
     /* configure radio (cr) */
@@ -90,14 +98,9 @@ configure_range_extender(void)     // ROH
     NETSTACK_RADIO.set_value(RADIO_PARAM_TXPOWER, 5);
     
     /* Configure GPIO pins and switch amplifiers on */
-    
-    ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_RANGE_EXTENDER_HGM);
-    ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_RANGE_EXTENDER_LNA_EN);
-    ti_lib_ioc_pin_type_gpio_output(BOARD_IOID_RANGE_EXTENDER_PA_EN);
-    
-    ti_lib_gpio_write_dio(BOARD_HGM, 1);
-    ti_lib_gpio_write_dio(BOARD_LNA_EN, 1);
-    ti_lib_gpio_write_dio(BOARD_PA_EN, 1);
+    config_gpio(BOARD_IOID_RANGE_EXTENDER_HGM);
+    config_gpio(BOARD_IOID_RANGE_EXTENDER_LNA_EN);
+    config_gpio(BOARD_IOID_RANGE_EXTENDER_PA_EN);
 }
 /*---------------------------------------------------------------------------*/
 void
