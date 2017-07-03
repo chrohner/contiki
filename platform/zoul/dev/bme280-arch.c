@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Texas Instruments Incorporated - http://www.ti.com/
+ * Copyright (c) 2015, Zolertia
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,41 +28,51 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/*---------------------------------------------------------------------------*/
 /**
- * \addtogroup cc2538
- * @{
- *
- * \defgroup cc2538-mpu cc2538 Memory Protection Unit
- *
- * Driver for the cc2538 Memory Protection Unit
+ * \addtogroup zoul-bme280-sensor
  * @{
  *
  * \file
- * Header file for the ARM Memory Protection Unit
+ *  Architecture-specific I2C for the external BME280 weather sensor
+ *
+ * \author
+ *         Antonio Lignan <alinan@zolertia.com>
  */
-#ifndef MPU_H_
-#define MPU_H_
+/*---------------------------------------------------------------------------*/
+#include "contiki.h"
+#include "dev/i2c.h"
+/*---------------------------------------------------------------------------*/
+void
+bme280_arch_i2c_init(void)
+{
+  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN,
+           I2C_SCL_NORMAL_BUS_SPEED);
+}
+/*---------------------------------------------------------------------------*/
+void
+bme280_arch_i2c_write_mem(uint8_t addr, uint8_t reg, uint8_t value)
+{
+  uint8_t buf[2];
 
-#define MPU_MPU_TYPE           0xE000ED90 /**< MPU Type */
-#define MPU_MPU_CTRL           0xE000ED94 /**< MPU Control */
-#define MPU_MPU_NUMBER         0xE000ED98 /**< MPU Region Number */
-#define MPU_MPU_BASE           0xE000ED9C /**< MPU Region Base Address */
-#define MPU_MPU_ATTR           0xE000EDA0 /**< MPU Region Attribute and Size */
-#define MPU_MPU_BASE1          0xE000EDA4 /**< MPU Region Base Address Alias 1 */
-#define MPU_MPU_ATTR1          0xE000EDA8 /**< MPU Region Attribute and Size Alias 1 */
-#define MPU_MPU_BASE2          0xE000EDAC /**< MPU Region Base Address Alias 2 */
-#define MPU_MPU_ATTR2          0xE000EDB0 /**< MPU Region Attribute and Size Alias 2*/
-#define MPU_MPU_BASE3          0xE000EDB4 /**< MPU Region Base Address Alias 3 */
-#define MPU_MPU_ATTR3          0xE000EDB8 /**< MPU Region Attribute and Size Alias 3*/
-#define MPU_DBG_CTRL           0xE000EDF0 /**< Debug Control and Status Reg */
-#define MPU_DBG_XFER           0xE000EDF4 /**< Debug Core Reg. Transfer Select */
-#define MPU_DBG_DATA           0xE000EDF8 /**< Debug Core Register Data */
-#define MPU_DBG_INT            0xE000EDFC /**< Debug Reset Interrupt Control */
-#define MPU_SW_TRIG            0xE000EF00 /**< Software Trigger Interrupt */
+  buf[0] = reg;
+  buf[1] = value;
 
-#endif /* MPU_H_ */
-
+  i2c_master_enable();
+  i2c_burst_send(addr, buf, 2);
+}
+/*---------------------------------------------------------------------------*/
+void
+bme280_arch_i2c_read_mem(uint8_t addr, uint8_t reg, uint8_t *buf, uint8_t bytes)
+{
+  i2c_master_enable();
+  if(i2c_single_send(addr, reg) == I2C_MASTER_ERR_NONE) {
+    while(i2c_master_busy());
+    i2c_burst_receive(addr, buf, bytes);
+  }
+}
+/*---------------------------------------------------------------------------*/
 /**
  * @}
- * @}
  */
+

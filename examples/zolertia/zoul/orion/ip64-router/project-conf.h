@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Texas Instruments Incorporated - http://www.ti.com/
+ * Copyright (c) 2016, Zolertia - http://www.zolertia.com
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,45 +28,52 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/*---------------------------------------------------------------------------*/
 /**
- * \addtogroup cc2538-cpu
+ * \addtogroup zoul-examples
+ * @{
+ *
+ * \defgroup zolertia-orion-router Zolertia's Orion border router
+ *
+ * Implements a simple IP64 router with a webserver
+ *
  * @{
  *
  * \file
- * Implementations of interrupt control on the cc2538 Cortex-M3 micro
+ *  Configuration file for the Zolertia's Orion IP64 router
+ *
+ * \author
+ *         Antonio Lignan <alinan@zolertia.com>
  */
 /*---------------------------------------------------------------------------*/
-unsigned long __attribute__((naked))
-cpu_cpsie(void)
-{
-  unsigned long ret;
+#ifndef PROJECT_CONF_H_
+#define PROJECT_CONF_H_
 
-  /* Read PRIMASK and enable interrupts */
-  __asm("    mrs     r0, PRIMASK\n"
-        "    cpsie   i\n"
-        "    bx      lr\n"
-        : "=r" (ret));
+/* Prevent the router from dropping below LPM2 to avoid RAM overflow */
+#define LPM_CONF_MAX_PM             0
 
-  /* The inline asm returns, we never reach here.
-   * We add a return statement to keep the compiler happy */
-  return ret;
-}
+/* Use either the cc1200_driver for sub-1GHz, or cc2538_rf_driver (default)
+ * for 2.4GHz built-in radio interface
+ */
+#undef  NETSTACK_CONF_RADIO
+#define NETSTACK_CONF_RADIO         cc2538_rf_driver
+
+/* Disable RDC */
+#define NETSTACK_CONF_RDC           nullrdc_driver
+
+/* USe DHCP */
+#define IP64_CONF_DHCP              1
+
+/* Webserver settings */
+#define WEBSERVER_CONF_ROUTE_LINKS  0
+#define UIP_CONF_RECEIVE_WINDOW     128
+#define WEBSERVER_CONF_CFS_CONNS    2
+#define UIP_CONF_BUFFER_SIZE        900
+#define UIP_CONF_TCP_MSS            128
+
+#endif /* PROJECT_CONF_H_ */
 /*---------------------------------------------------------------------------*/
-unsigned long __attribute__((naked))
-cpu_cpsid(void)
-{
-  unsigned long ret;
-
-  /* Read PRIMASK and disable interrupts */
-  __asm("    mrs     r0, PRIMASK\n"
-        "    cpsid   i\n"
-        "    bx      lr\n"
-        : "=r" (ret));
-
-  /* The inline asm returns, we never reach here.
-   * We add a return statement to keep the compiler happy */
-  return ret;
-}
-/*---------------------------------------------------------------------------*/
-
-/** @} */
+/**
+ * @}
+ * @}
+ */
